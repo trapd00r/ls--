@@ -6,7 +6,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper::Concise;
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 
 my $config = "$ENV{XDG_CONFIG_HOME}/ls++/ls++.conf";
