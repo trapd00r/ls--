@@ -4,8 +4,10 @@ use open qw/:std :utf8/;
 use utf8;
 use Getopt::Long;
 use Pod::Usage;
+use Data::Dumper::Concise;
 
-my $DEBUG = 0;
+my $DEBUG = 1;
+
 
 my $config = "$ENV{XDG_CONFIG_HOME}/ls++/ls++.conf";
 
@@ -14,16 +16,20 @@ if($@) {
   die($@);
 }
 
+# Imported from config
 our(
-  @c,           # colors
+  # The @c array is alredy imported ↑
+  @c,
   @d,           # delimiters
   $color256,    # 256 color support?
   $colorscheme, # colorscheme to use?
   $padding_z,   # size padding
   @ignores,     # files to be ignored
-  $ln_arrow,
-  $ln_color,
+  $ln_arrow,    # symlink arrow
+  $ln_color,    # symlink arrow color
+  %ft_colors    #
 );
+
 
 our(
   $opt_view_perm_file,
@@ -48,15 +54,9 @@ if(!@ARGV) {
   @ARGV = './';
 }
 
-
-## set same color on all delims
 @d = map { $_ = "$c[0]$_$c[16]" } @d;
 
-# gets current time for relative time calculation
 my $curtime = time();
-
-## expects following:
-##	-rw-r--r-- 1 user group 32K 1280000000 name
 
 my $ls_cmd = 'ls -hAlv'
   . ' --group-directories-first --color=always --time=ctime --time-style=+%s';
@@ -64,7 +64,8 @@ my $ls_cmd = 'ls -hAlv'
 open(my $ls, '-|', "$ls_cmd '@ARGV'") or die($!);
 
 while(<$ls>) {
-  s/->/$ln_color$ln_arrow$c[16]/;
+  s/->/$ln_color$ln_arrow$c[16]/; # FIXME
+
   next if /^total/;
   my ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/);
 
@@ -74,6 +75,13 @@ while(<$ls>) {
   if($file =~ join(' ', @ignores)) {
     # ignore those files and skip to next
     next;
+  }
+
+  for my $re(keys(%ft_colors)) {
+    if($file =~ m/$re/i) {
+      $file =~ s|\e\[[0-9;]+m||; # remove LS_COLORS
+      $file = "$ft_colors{$re}$file\e[0m";
+    }
   }
 
   ## calculate relative time
@@ -107,84 +115,6 @@ while(<$ls>) {
 }
 close($ls);
 
-## view: permissions and filename
-## | <perm> | <filename>
-# FIXME Merge all these small functions into a big one
-sub perm_file{
-  my ($perm, $file) = @_;
-  printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
-}
-
-## view: permissions, size and filename
-## | <perm> | <size> | <filename>
-sub perm_size_file{
-  my ($perm, $size, $file) = @_;
-  printf("%s%s%s%-19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
-}
-
-## view: permissions, time, size and filename
-## <time> | <perm> | <filename>
-sub time_perm_file{
-  my ($perm, $rel, $file) = @_;
-  printf("%s%s%s%s%s\n", $rel, $d[0], $perm, $d[3], $file);
-}
-
-## view: time, permissions, size and filename
-## <time> | <perm> | <size> | <filename>
-sub time_perm_size_file{
-  my ($perm, $rel, $size, $file) = @_;
-  printf("%s%s%s%s%-${padding_z}s%s%s\n", $rel, $d[0], $perm, $d[3], $size, $d[2], $file);
-}
-
-## view: permissions, time, size and filename
-## | <perm> | <size> | <filename>
-sub perm_time_size_file{
-  my ($perm, $rel, $size, $file) = @_;
-  printf("%s %s%s%s%s%-${padding_z}s%s%s\n", $d[0], $perm, $d[3], $rel, $d[2], $size, $d[2], $file);
-}
-
-## view: file to the right
-## <var> | <filename>
-sub right_file{
-  my ($var, $file, $paddingright) = @_;
-  printf("%${paddingright}s%s%s\n", $var, $d[2], $file);
-}
-
-## view: file to the left
-## <...filename> | <var>
-sub left_file{
-  my ($file, $size, $paddingleft) = @_;
-
-  ## first row has a \e[0m
-  $file =~ s/^\e\[0m//g;
-
-  my ($esclen, $strlen) = (0, length($file));
-
-  ## for each escape sequence, pad the length of it
-  while($file =~ m/\e\[(.*?m)/g) {
-  	$esclen += length($1);
-  }
-
-  ## special symlink
-  if($file =~ s/->/▻/) {
-  	$esclen += 5;
-  }
-
-  my $padlen = $paddingleft - $strlen + $esclen;
-
-  ## cut too long filenames
-  if($padlen < 0) {
-  	$file = substr($file, 0, $padlen-7);
-  	$padlen = 0;
-  	$file = $file . "...\e[0m";
-  }
-
-  # pad with spaces
-  #$file = $file . ( ' ' x $padlen);
-  $file = ( ' ' x $padlen) . $file;
-
-  printf("%s%s%s\n", $file, $d[2], $size);
-}
 
 ## colorizes permissions
 sub perm {
@@ -195,7 +125,7 @@ sub perm {
   $perm =~ s/(w)/$c[7]$1$c[16]/g;
   $perm =~ s/(x)/$c[5]$1$c[16]/g;
   $perm =~ s/(d)/$c[3]$c[17]$1$c[16]/g;
-  $perm =~ s/(l)/$c[13]$1$c[16]/g;
+  $perm =~ s/(l)/$c[8]$c[13]$1$c[16]/g;
   $perm =~ s/(s)/$c[11]$1$c[16]/g;
   $perm =~ s/(S)/$c[8]$1$c[16]/g;
   $perm =~ s/(t)/$c[8]$1$c[16]/g;
@@ -275,6 +205,83 @@ sub relativef {
   my ($color, $string, $unit) = @_;
   return sprintf("%s%-3s%-3s%s", $color, $string, $unit, $c[16]);
 }
+
+sub perm_file{
+  my ($perm, $file) = @_;
+  printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
+}
+
+## view: permissions, size and filename
+## | <perm> | <size> | <filename>
+sub perm_size_file{
+  my ($perm, $size, $file) = @_;
+  printf("%s%s%s%-19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+}
+
+## view: permissions, time, size and filename
+## <time> | <perm> | <filename>
+sub time_perm_file{
+  my ($perm, $rel, $file) = @_;
+  printf("%s%s%s%s%s\n", $rel, $d[0], $perm, $d[3], $file);
+}
+
+## view: time, permissions, size and filename
+## <time> | <perm> | <size> | <filename>
+sub time_perm_size_file{
+  my ($perm, $rel, $size, $file) = @_;
+  printf("%s%s%s%s%-${padding_z}s%s%s\n", $rel, $d[0], $perm, $d[3], $size, $d[2], $file);
+}
+
+## view: permissions, time, size and filename
+## | <perm> | <size> | <filename>
+sub perm_time_size_file{
+  my ($perm, $rel, $size, $file) = @_;
+  printf("%s %s%s%s%s%-${padding_z}s%s%s\n", $d[0], $perm, $d[3], $rel, $d[2], $size, $d[2], $file);
+}
+
+## view: file to the right
+## <var> | <filename>
+sub right_file{
+  my ($var, $file, $paddingright) = @_;
+  printf("%${paddingright}s%s%s\n", $var, $d[2], $file);
+}
+
+sub left_file{
+  my ($file, $size, $paddingleft) = @_;
+
+  ## first row has a \e[0m
+  $file =~ s/^\e\[0m//g;
+
+  my ($esclen, $strlen) = (0, length($file));
+
+  ## for each escape sequence, pad the length of it
+  while($file =~ m/\e\[(.*?m)/g) {
+  	$esclen += length($1);
+  }
+
+  ## special symlink
+  if($file =~ s/->/▻/) {
+  	$esclen += 5;
+  }
+
+  my $padlen = $paddingleft - $strlen + $esclen;
+
+  ## cut too long filenames
+  if($padlen < 0) {
+  	$file = substr($file, 0, $padlen-7);
+  	$padlen = 0;
+  	$file = $file . "...\e[0m";
+  }
+
+  # pad with spaces
+  #$file = $file . ( ' ' x $padlen);
+  $file = ( ' ' x $padlen) . $file;
+
+  printf("%s%s%s\n", $file, $d[2], $size);
+}
+
+
+
 
 =pod
 
