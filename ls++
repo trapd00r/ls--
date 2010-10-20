@@ -3,6 +3,7 @@ use strict;
 use open qw/:std :utf8/;
 use utf8;
 use Pod::Usage;
+use Cwd 'abs_path';
 #use Data::Dumper::Concise;
 
 my $DEBUG = 0;
@@ -32,7 +33,9 @@ our(
 my $curtime = time();
 my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel) = ();
 
-my $opts = {
+my $opts;
+
+$opts = {
   '-pf'     => sub { perm_file($perm, $file); },
   '-psf'    => sub { perm_size_file($perm, $size, $file); },
   '-tpf'    => sub { time_perm_file($rel, $perm, $file); },
@@ -43,37 +46,61 @@ my $opts = {
   '-m'      => sub { pod2usage(verbose => 2); },
 };
 
-my $ls_where = './';
+sub is_file {
+  my $what = shift;
+  return 1 if(-e $what);
+}
 
-my $cmd = shift;
-if(-e $cmd) { # File/Dir
-  $ls_where = $cmd;
-  # We check for definedness later on
-  $cmd = shift;
+do {
+  my $i = 0;
+  for(@c) {
+    printf("%s \$c[$i]\e[0m\n", $_);
+    $i++;
+  }
+  $i = 0;
+  for(@d) {
+    printf("%s \$d[$i]\n", $_, $i);
+    $i++;
+  }
+} if($DEBUG);
+
+my @ls_where = ();
+
+my $cmd = undef;
+for(@ARGV) {
+  if(is_file($_)) {
+    push(@ls_where, $_);
+  }
+  else {
+    $cmd = shift;
+  }
 }
-elsif(defined($opts->{$cmd})) {
-  $ls_where = shift // './';
-}
+@ls_where = './' if(!@ls_where);
+
 
 my $ls_cmd = 'ls -hAlv'
   . ' --group-directories-first --color=always --time=ctime --time-style=+%s';
 
-open(my $ls, '-|', "$ls_cmd '$ls_where'") or die($!);
+open(my $ls, '-|', "$ls_cmd @ls_where") or die($!);
 
 while(<$ls>) {
   s/->/$ln_color$ln_arrow$c[16]/; # FIXME
 
-  next if /^total/;
+  next if(/^total/);
 
-  ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/);
+  if(/^(.+):$/) { # /tmp: , .:
+    my $where = abs_path($1); # resolve ./, $HOME etc
+    printf("$c[10]>\e[1m$c[9]>\e[0m %s\n", $where);
+    next;
+  }
+
+  ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/)
+    unless(/^\s+/); # /tmp:
 
   ## parse filename separetly to allow for whitespace etc.
   ($file) = m/.* \d{6,}? (.*)/;
 
-  if($file =~ join(' ', @ignores)) {
-    # ignore those files and skip to next
-    next;
-  }
+  next if($file =~ join(' ', @ignores));
 
   for my $re(keys(%ft_colors)) {
     if($file =~ m/$re/i) {
