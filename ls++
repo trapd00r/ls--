@@ -8,7 +8,6 @@ use Data::Dumper::Concise;
 
 my $DEBUG = 0;
 
-
 my $config = "$ENV{XDG_CONFIG_HOME}/ls++/ls++.conf";
 
 ($DEBUG) ? require('./ls++.conf') : require($config);
@@ -18,7 +17,6 @@ if($@) {
 
 # Imported from config
 our(
-  # The @c array is alredy imported ↑
   @c,
   @d,           # delimiters
   $color256,    # 256 color support?
@@ -27,50 +25,51 @@ our(
   @ignores,     # files to be ignored
   $ln_arrow,    # symlink arrow
   $ln_color,    # symlink arrow color
-  %ft_colors    #
+  %ft_colors    # for LS_COLORS type of coloring
 );
-
-
-our(
-  $opt_view_perm_file,
-  $opt_view_perm_size_file,
-  $opt_view_time_perm_file,
-  $opt_view_time_perm_size_file,
-  $opt_view_perm_time_size_file,
-);
-
-GetOptions(
-  pf    => \$opt_view_perm_file,
-  psf   => \$opt_view_perm_size_file,
-  tpf   => \$opt_view_time_perm_file,
-  tpsf  => \$opt_view_time_perm_size_file,
-  ptsf  => \$opt_view_perm_time_size_file,
-
-  help  => sub { pod2usage(verbose => 1); },
-  man   => sub { pod2usage(verbose => 2); },
-);
-
-if(!@ARGV) {
-  @ARGV = './';
-}
 
 @d = map { $_ = "$c[0]$_$c[16]" } @d;
 
 my $curtime = time();
+my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel) = ();
+
+my $opts = {
+  '-pf'     => sub { perm_file($perm, $file); },
+  '-psf'    => sub { perm_size_file($perm, $size, $file); },
+  '-tpf'    => sub { time_perm_file($rel, $perm, $file); },
+  '-tpsf'   => sub { time_perm_size_file($rel, $perm, $size, $file); },
+  '-ptsf'   => sub { perm_time_size_file($perm, $rel, $size, $file); },
+
+  '-h'      => sub { pod2usage(verbose => 1); },
+  '-m'      => sub { pod2usage(verbose => 2); },
+};
+
+my $ls_where = './';
+
+my $cmd = shift;
+if(-e $cmd) { # File/Dir
+  $ls_where = $cmd;
+  # We check for definedness later on
+  $cmd = shift;
+}
+elsif(defined($opts->{$cmd})) {
+  $ls_where = shift // './';
+}
 
 my $ls_cmd = 'ls -hAlv'
   . ' --group-directories-first --color=always --time=ctime --time-style=+%s';
 
-open(my $ls, '-|', "$ls_cmd '@ARGV'") or die($!);
+open(my $ls, '-|', "$ls_cmd '$ls_where'") or die($!);
 
 while(<$ls>) {
   s/->/$ln_color$ln_arrow$c[16]/; # FIXME
 
   next if /^total/;
-  my ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/);
+
+  ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/);
 
   ## parse filename separetly to allow for whitespace etc.
-  my ($file) = m/.* \d{6,}? (.*)/;
+  ($file) = m/.* \d{6,}? (.*)/;
 
   if($file =~ join(' ', @ignores)) {
     # ignore those files and skip to next
@@ -85,7 +84,7 @@ while(<$ls>) {
   }
 
   ## calculate relative time
-  my ($rel) = relative(time(), $seconds);
+  ($rel) = relative(time(), $seconds);
 
   ## color size
   $size = size($size);
@@ -95,26 +94,15 @@ while(<$ls>) {
 
   ## views
 
-  if($opt_view_perm_file) {
-    perm_file($perm, $file);
-  }
-  elsif($opt_view_perm_size_file) {
-    perm_size_file($perm, $size, $file);
-  }
-  elsif($opt_view_time_perm_file) {
-    time_perm_size_file($perm, $rel, $size, $file);
-  }
-  elsif($opt_view_perm_size_file) {
-    time_perm_size_file($perm, $rel, $size, $file);
+  if(defined($opts->{$cmd})) {
+    $opts->{$cmd}->();
   }
   else {
-    perm_time_size_file($perm, $rel, $size, $file)
+    # ▕ -rwxr-xr-x▏<  sec │ 8.5K│ls++
+    $opts->{'-ptsf'}->();
   }
-  #left_file($file, $size, 50);
-  #right_file($size, $file, 50);
 }
 close($ls);
-
 
 ## colorizes permissions
 sub perm {
@@ -295,6 +283,7 @@ ls++ [view] (files)
 
 =head1 DESCRIPTION
 
+  1 up!
 
 =head1 OPTIONS
 
@@ -343,4 +332,3 @@ License GPLv2
 B<l> <http://github.com/mmso/scripts>
 
 =cut
-
