@@ -33,9 +33,7 @@ our(
 my $curtime = time();
 my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel) = ();
 
-my $opts;
-
-$opts = {
+my $opts = {
   '-pf'     => sub { perm_file($perm, $file); },
   '-psf'    => sub { perm_size_file($perm, $size, $file); },
   '-tpf'    => sub { time_perm_file($rel, $perm, $file); },
