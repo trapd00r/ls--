@@ -67,7 +67,7 @@ my @ls_where = ();
 my $cmd = undef;
 for(@ARGV) {
   if(is_file($_)) {
-    push(@ls_where, $_);
+    push(@ls_where, "'$_'");
   }
   else {
     $cmd = shift;
