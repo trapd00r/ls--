@@ -6,6 +6,10 @@ ls++ - colorized ls on steroids
 
 ls++ [view] (files)
 
+# DESCRIPTION
+
+  ![ls++ screenshot](http://github.com/trapd00r/ls--/raw/master/extra/shot.png "ls++ screenshot")
+
 # OPTIONS
 
 ### Views
