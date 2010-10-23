@@ -25,7 +25,8 @@ our(
   @ignores,     # files to be ignored
   $ln_arrow,    # symlink arrow
   $ln_color,    # symlink arrow color
-  %ft_colors    # for LS_COLORS type of coloring
+  %ft_colors,   # for LS_COLORS type of coloring
+  %match_files, # colorize specific patterns
 );
 
 @d = map { $_ = "$c[0]$_$c[16]" } @d;
@@ -100,8 +101,15 @@ while(<$ls>) {
 
   next if($file =~ join(' ', @ignores));
 
+  for my $match(keys(%match_files)) {
+    if($file =~ m/$match/) {
+      $file =~ s|\e\[[0-9;]+m||; # remove LS_COLORS
+      $file = "$match_files{$match}$file\e[0m";
+    }
+  }
+
   for my $re(keys(%ft_colors)) {
-    if($file =~ m/$re/i) {
+    if($file =~ m/$re/) {
       $file =~ s|\e\[[0-9;]+m||; # remove LS_COLORS
       $file = "$ft_colors{$re}$file\e[0m";
     }
