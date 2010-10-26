@@ -103,14 +103,14 @@ while(<$ls>) {
 
   for my $match(keys(%match_files)) {
     if($file =~ m/$match/) {
-      $file =~ s|\e\[[0-9;]+m||; # remove LS_COLORS
+      $file =~ s$(?:\e|\033)\[[0-9;]+m$$; # remove LS_COLORS
       $file = "$match_files{$match}$file\e[0m";
     }
   }
 
   for my $re(keys(%ft_colors)) {
     if($file =~ m/$re/) {
-      $file =~ s|\e\[[0-9;]+m||; # remove LS_COLORS
+      $file =~ s$(?:\e|\033)\[[0-9;]+m$$; # remove LS_COLORS
       $file = "$ft_colors{$re}$file\e[0m";
     }
   }
@@ -162,7 +162,8 @@ sub size {
     if ($size =~ s/(.*)(K)/$c[2]$1$c[2]$c[17]$2$c[16]/);
   return sprintf("% 26s", $size)
     if ($size =~ s/(.*)(M)/$c[7]$1$c[17]$2$c[16]/);
-  return $size if ($size =~ s/(.*)(G)/$c[3]$1$c[17]$2$c[16]/);
+  return sprintf("% 26s", $size)
+    if ($size =~ s/(.*)(G)/$c[3]$1$c[17]$2$c[16]/);
   return sprintf("% 26s", $size) # 1012B
     if ($size =~ s/(\d+)/$c[14]$1$c[17]B$c[16]/);
 }
