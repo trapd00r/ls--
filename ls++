@@ -1,4 +1,8 @@
 #!/usr/bin/perl
+use vars qw($DEBUG $APP $VERSION);
+
+$APP     = 'ls++';
+$VERSION = 0.21;
 use strict;
 use open qw/:std :utf8/;
 use utf8;
@@ -6,14 +10,14 @@ use Pod::Usage;
 use Cwd 'abs_path';
 #use Data::Dumper::Concise;
 
-my $DEBUG = 0;
+if(!-t STDOUT ) {
+  system('/bin/ls', @ARGV); # ls -1
+  exit;
+}
 
 my $config = "$ENV{XDG_CONFIG_HOME}/ls++/ls++.conf";
 
 ($DEBUG) ? require('./ls++.conf') : require($config);
-if($@) {
-  die($@);
-}
 
 # Imported from config
 our(
@@ -29,7 +33,7 @@ our(
   %match_files, # colorize specific patterns
 );
 
-@d = map { $_ = "$c[0]$_$c[16]" } @d;
+map { $_ = "$c[0]$_$c[16]" } @d;
 
 my $curtime = time();
 my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel) = ();
@@ -41,7 +45,7 @@ my $opts = {
   '-tpsf'   => sub { time_perm_size_file($rel, $perm, $size, $file); },
   '-ptsf'   => sub { perm_time_size_file($perm, $rel, $size, $file); },
 
-  '-h'      => sub { pod2usage(verbose => 1); },
+  '-h'      => sub { print "$APP $VERSION\n\n"; pod2usage(verbose => 1); },
   '-m'      => sub { pod2usage(verbose => 2); },
 };
 
@@ -327,6 +331,8 @@ ls++ [view] (files)
   --tpf   time, permissions, file
   --tpsf  time, permissions, size, file (default)
   --ptsf  permissions, time, size, file
+
+=head3 Documentation
 
   --help  show the help and exit
   --man   show the manpage and exit
