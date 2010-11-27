@@ -2,13 +2,21 @@
 use vars qw($DEBUG $APP $VERSION);
 
 $APP     = 'ls++';
-$VERSION = 0.21;
+$VERSION = 0.215;
 use strict;
 use open qw/:std :utf8/;
 use utf8;
 use Pod::Usage;
 use Cwd 'abs_path';
-#use Data::Dumper::Concise;
+use Getopt::Long;
+
+#use Data::Dumper;
+#$Data::Dumper::Terse     = 1;
+#$Data::Dumper::Indent    = 1;
+#$Data::Dumper::Useqq     = 1;
+#$Data::Dumper::Deparse   = 1;
+#$Data::Dumper::Quotekeys = 0;
+#$Data::Dumper::Sortkeys  = 1;
 
 if(!-t STDOUT ) {
   system('/bin/ls', @ARGV); # ls -1
@@ -33,21 +41,47 @@ our(
   %match_files, # colorize specific patterns
 );
 
-map { $_ = "$c[0]$_$c[16]" } @d;
+our($opt_pf, $opt_psf, $opt_tpf, $opt_tpsf, $opt_ptsf);
+GetOptions(
+  'pf'      => \$opt_pf,
+  'psf'     => \$opt_psf,
+  'tpf'     => \$opt_tpf,
+  'tpsf'    => \$opt_tpsf,
+  'ptsf'    => \$opt_ptsf,
+
+  'no-color'=> sub {
+    $color256 = 0;
+    @c = (
+      "\e[30m",   # NULL              black
+      "\e[30;1m", # NULL              bright black
+      "\e[31m",   # K                 red
+      "\e[31;1m", # G, sec            bright red
+      "\e[32m",   # day               green
+      "\e[32;1m", # +x                bright green
+      "\e[33m",   # +r                yellow
+      "\e[33;1m", # +w, M             bright yellow
+      "\e[34m",   # other             blue
+      "\e[34;1m", # hour              bright blue
+      "\e[35m",   #                   magenta
+      "\e[35;1m", # +s                bright magenta
+      "\e[36m",   #                   cyan
+      "\e[36;1m", # link              bright cyan
+      "\e[37m",   # B, month, delim   white
+
+      "\e[33;1m", #
+      "\e[0m",    #                   default
+      "\e[1m",    # Various           bold
+      );
+    },
+  'help'     => sub { print "$APP $VERSION\n\n"; pod2usage(verbose => 1); },
+  'man'      => sub { pod2usage(verbose => 2); },
+);
+
 
 my $curtime = time();
-my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel) = ();
+my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
 
-my $opts = {
-  '-pf'     => sub { perm_file($perm, $file); },
-  '-psf'    => sub { perm_size_file($perm, $size, $file); },
-  '-tpf'    => sub { time_perm_file($rel, $perm, $file); },
-  '-tpsf'   => sub { time_perm_size_file($rel, $perm, $size, $file); },
-  '-ptsf'   => sub { perm_time_size_file($perm, $rel, $size, $file); },
-
-  '-h'      => sub { print "$APP $VERSION\n\n"; pod2usage(verbose => 1); },
-  '-m'      => sub { pod2usage(verbose => 2); },
-};
+($color256) ? map { $_ = "$c[0]$_$c[16]" } @d : map { $_ = "$c[1]$_$c[16]" } @d;
 
 sub is_file {
   my $what = shift;
@@ -130,15 +164,27 @@ while(<$ls>) {
 
   ## views
 
-  if(defined($opts->{$cmd})) {
-    $opts->{$cmd}->();
+  if($opt_pf) {
+    perm_file($perm, $file);
+  }
+  elsif($opt_psf) {
+    perm_size_file($perm, $size, $file);
+  }
+  elsif($opt_tpf) {
+    time_perm_file($rel, $perm, $file);
+  }
+  elsif($opt_tpsf) {
+    time_perm_size_file($rel, $perm, $size, $file);
+  }
+  elsif($opt_ptsf) {
+    perm_time_size_file($perm, $rel, $size, $file);
   }
   else {
-    # ▕ -rwxr-xr-x▏<  sec │ 8.5K│ls++
-    $opts->{'-ptsf'}->();
+    perm_time_size_file($perm, $rel,  $size, $file);
   }
 }
 close($ls);
+
 
 ## colorizes permissions
 sub perm {
@@ -162,15 +208,29 @@ sub perm {
 sub size {
   my ($size) = @_;
 
-  return sprintf("% 39s", $size)
-    if ($size =~ s/(.*)(K)/$c[2]$1$c[2]$c[17]$2$c[16]/);
-  return sprintf("% 26s", $size)
-    if ($size =~ s/(.*)(M)/$c[7]$1$c[17]$2$c[16]/);
-  return sprintf("% 26s", $size)
-    if ($size =~ s/(.*)(G)/$c[3]$1$c[17]$2$c[16]/);
-  return sprintf("% 26s", $size) # 1012B
-    if ($size =~ s/(\d+)/$c[14]$1$c[17]B$c[16]/);
+  if($color256) {
+    return sprintf("% 40s", $size)
+      if ($size =~ s/^(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
+    return sprintf("% 27s", $size)
+      if ($size =~ s/^(.*)(M)$/$c[7]$1$c[17]$2$c[16]/);
+    return sprintf("% 27s", $size)
+      if ($size =~ s/^(.*)(G)$/$c[3]$1$c[17]$2$c[16]/);
+    return sprintf("% 27s", $size) # 1012B
+      if ($size =~ s/^(\d+)$/$c[14]$1$c[17]B$c[16]/);
+  }
+  else {
+    return sprintf("% 26s", $size)
+      if ($size =~ s/(.*)(K)/$c[2]$1$c[2]$c[17]$2$c[16]/);
+    return sprintf("% 23s", $size)
+      if ($size =~ s/(.*)(M)/$c[7]$1$c[17]$2$c[16]/);
+    return sprintf("% 23s", $size)
+      if ($size =~ s/(.*)(G)/$c[3]$1$c[17]$2$c[16]/);
+    return sprintf("% 21s", $size) # 1012B
+      if ($size =~ s/(\d+)/$c[14]$1$c[17]B$c[16]/);
+    }
 }
+
+
 
 ## calculates relative time from the current time in seconds
 sub relative {
@@ -231,47 +291,47 @@ sub relativef {
   return sprintf("%s%-3s%-3s%s", $color, $string, $unit, $c[16]);
 }
 
-sub perm_file{
+sub perm_file {
   my ($perm, $file) = @_;
   printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
 }
 
 ## view: permissions, size and filename
 ## | <perm> | <size> | <filename>
-sub perm_size_file{
+sub perm_size_file {
   my ($perm, $size, $file) = @_;
   printf("%s%s%s%-19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
 }
 
 ## view: permissions, time, size and filename
 ## <time> | <perm> | <filename>
-sub time_perm_file{
+sub time_perm_file {
   my ($perm, $rel, $file) = @_;
   printf("%s%s%s%s%s\n", $rel, $d[0], $perm, $d[3], $file);
 }
 
 ## view: time, permissions, size and filename
 ## <time> | <perm> | <size> | <filename>
-sub time_perm_size_file{
+sub time_perm_size_file {
   my ($perm, $rel, $size, $file) = @_;
-  printf("%s%s%s%s%-${padding_z}s%s%s\n", $rel, $d[0], $perm, $d[3], $size, $d[2], $file);
+  printf("%s%s%s%s%s%s%s\n", $rel, $d[0], $perm, $d[3], $size, $d[2], $file);
 }
 
 ## view: permissions, time, size and filename
 ## | <perm> | <size> | <filename>
-sub perm_time_size_file{
+sub perm_time_size_file {
   my ($perm, $rel, $size, $file) = @_;
-  printf("%s %s%s%s%s%-${padding_z}s%s%s\n", $d[0], $perm, $d[3], $rel, $d[2], $size, $d[2], $file);
+  printf("%s %s%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $rel, $d[2], $size, $d[2], $file);
 }
 
 ## view: file to the right
 ## <var> | <filename>
-sub right_file{
+sub right_file {
   my ($var, $file, $paddingright) = @_;
   printf("%${paddingright}s%s%s\n", $var, $d[2], $file);
 }
 
-sub left_file{
+sub left_file {
   my ($file, $size, $paddingleft) = @_;
 
   ## first row has a \e[0m
@@ -281,7 +341,7 @@ sub left_file{
 
   ## for each escape sequence, pad the length of it
   while($file =~ m/\e\[(.*?m)/g) {
-  	$esclen += length($1);
+    $esclen += length($1);
   }
 
   ## special symlink
@@ -320,7 +380,7 @@ ls++ [view] (files)
 
 =head1 DESCRIPTION
 
-  1 up!
+ls++ is what GNU ls would look like with extensive makeup applied.
 
 =head1 OPTIONS
 
