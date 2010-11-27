@@ -20,7 +20,7 @@ WriteMakefile(
   EXE_FILES           => ['./ls++'],
 
   MAN1PODS            => {
-    './c256'          => 'blib/man1/ls++.1',
+    './ls++'          => 'blib/man1/ls++.1',
   },
 
   MIN_PERL_VERSION => '5.10.0',
