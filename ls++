@@ -49,7 +49,7 @@ GetOptions(
   'tpsf'    => \$opt_tpsf,
   'ptsf'    => \$opt_ptsf,
 
-  'no-color'=> sub {
+  'ansi'=> sub {
     $color256 = 0;
     @c = (
       "\e[30m",   # NULL              black
@@ -391,6 +391,10 @@ ls++ is what GNU ls would look like with extensive makeup applied.
   --tpf   time, permissions, file
   --tpsf  time, permissions, size, file (default)
   --ptsf  permissions, time, size, file
+
+=head3 COLORS
+
+  -ansi   use the standard ANSI colors
 
 =head3 Documentation
 
