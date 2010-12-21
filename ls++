@@ -23,9 +23,7 @@ if(!-t STDOUT ) {
   exit;
 }
 
-my $config = "$ENV{XDG_CONFIG_HOME}/ls++/ls++.conf";
-
-($DEBUG) ? require('./ls++.conf') : require($config);
+config_init();
 
 # Imported from config
 our(
@@ -115,10 +113,43 @@ for(@ARGV) {
 @ls_where = './' if(!@ls_where);
 
 
-my $ls_cmd = 'ls -hAlv'
+=for OS
+
+Mac OS / BSD ls differs from GNU coreutils ls:
+
+BSD   options: -hAlvGc
+Linux options: --hAlv --group-directories-first --color=always --time=ctime
+               --time-style=+%s
+
+
+BSD output:
+
+-rw-r--r--  1 trapd00r  staff   3.8K Dec 21 09:24 ls++.conf
+
+Coreutils output:
+
+-rw-r--r-- 1 scp1 users 4.0K 1292738451 ls++.conf
+
+There's no way the BSD ls could output ctime for a file, it seems.
+This makes calculating relative times difficult. Not sure how to solve this.
+
+=cut
+
+my $ls_cmd;
+
+# Make the coreutils cmdline the default for now...
+$ls_cmd = 'ls -hAlv'
   . ' --group-directories-first --color=always --time=ctime --time-style=+%s';
 
+#$^O = 'darwin';
+if($^O eq 'darwin') {
+  # Cover MacOS.
+  $ls_cmd = 'ls -hAlvGc';
+}
+
 open(my $ls, '-|', "$ls_cmd @ls_where") or die($!);
+
+
 
 while(<$ls>) {
   s/->/$ln_color$ln_arrow$c[16]/; # FIXME
@@ -131,13 +162,27 @@ while(<$ls>) {
     next;
   }
 
-  ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/)
-    unless(/^\s+/); # /tmp:
 
-  ## parse filename separetly to allow for whitespace etc.
-  ($file) = m/.* \d{6,}? (.*)/;
+  if($^O eq 'linux') {
+    ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/)
+      unless(/^\s+/); # /tmp:
 
-  next if($file =~ join(' ', @ignores));
+    ## parse filename separetly to allow for whitespace etc.
+    ($file) = m/.* \d{6,}? (.*)/;
+
+    next if($file =~ join(' ', @ignores));
+  }
+  elsif($^O eq 'darwin') {
+    ($perm, $hlink, $user, $group, $size) = split(/\s+/, $_);
+
+    ($file) = $_ =~ m/.*\d{2,}? (.*)/;
+
+    $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
+
+    next if($file =~ join(' ', @ignores));
+  }
+
+  next if !$file;
 
   for my $match(keys(%match_files)) {
     if($file =~ m/$match/) {
@@ -154,13 +199,32 @@ while(<$ls>) {
   }
 
   ## calculate relative time
-  ($rel) = relative(time(), $seconds);
 
-  ## color size
-  $size = size($size);
+  if($^O eq 'darwin') {
+    $rel = 'foo'; # Do a stat() on every file...
+  }
+  else {
+    ($rel) = relative(time(), $seconds);
+  }
+
 
   ## color permissions
   $perm = perm($perm);
+
+  if($^O eq 'darwin') {
+    if($size) {
+      ## color size
+      $size = size($size);
+      $size =~ s/\s+//;
+    }
+    if(!$size) {
+      $size = "\0" x 40 . "    ";
+
+    }
+    perm_size_file($perm, $size, $file);
+    #print "$size\n";
+    next;
+  }
 
   ## views
 
@@ -242,41 +306,41 @@ sub relative {
   $unit = "sec ";
   $ret = $delta;
 
-  return relativef($c[3], "<", $unit)		if $delta < 10;
-  return relativef($c[3], $ret, $unit)	if $delta < 60;
+  return relativef($c[3], "<", $unit)   if $delta < 10;
+  return relativef($c[3], $ret, $unit)  if $delta < 60;
 
   ## 1 < min < 45
   $unit = "min ";
   $ret = int($ret/60);
 
-  return relativef($c[15], "<", $unit)		if $delta < 2 * 60;
-  return relativef($c[15], $ret, $unit)	if $delta < 45 * 60;
+  return relativef($c[15], "<", $unit)    if $delta < 2 * 60;
+  return relativef($c[15], $ret, $unit) if $delta < 45 * 60;
 
   ## 0.75 < hour < 42
   $unit = "hour";
   $ret = int($ret/60);
 
-  return relativef($c[9], "<", $unit)		if $delta < 90 * 60;
-  return relativef($c[9], $ret, $unit)	if $delta < 24 * 60 * 60;
-  return relativef($c[9], $ret, $unit)	if $delta < 30 * 60 * 60;
-  return relativef($c[9], $ret, $unit)	if $delta < 36 * 60 * 60;
+  return relativef($c[9], "<", $unit)   if $delta < 90 * 60;
+  return relativef($c[9], $ret, $unit)  if $delta < 24 * 60 * 60;
+  return relativef($c[9], $ret, $unit)  if $delta < 30 * 60 * 60;
+  return relativef($c[9], $ret, $unit)  if $delta < 36 * 60 * 60;
 
   ## 0.75 < day < 30
   $unit = "day ";
   $ret = int($ret/24);
 
-  return relativef($c[4], "<", $unit)		if $delta < 48 * 60 * 60;
-  return relativef($c[4], $ret, $unit)	if $delta < 7 * 24 * 60 * 60;
-  return relativef($c[4], $ret, $unit)	if $delta < 14 * 24 * 60 * 60;
-  return relativef($c[4], $ret, $unit)	if $delta < 28 * 24 * 60 * 60;
-  return relativef($c[4], $ret, $unit)	if $delta < 30 * 24 * 60 * 60;
+  return relativef($c[4], "<", $unit)   if $delta < 48 * 60 * 60;
+  return relativef($c[4], $ret, $unit)  if $delta < 7 * 24 * 60 * 60;
+  return relativef($c[4], $ret, $unit)  if $delta < 14 * 24 * 60 * 60;
+  return relativef($c[4], $ret, $unit)  if $delta < 28 * 24 * 60 * 60;
+  return relativef($c[4], $ret, $unit)  if $delta < 30 * 24 * 60 * 60;
 
   ## 1 < month < 12
   $unit = "mon ";
   $ret = int($ret/30);
 
-  return relativef($c[14], "<", $unit)		if $delta < 2 * 30 * 24 * 60 * 60;
-  return relativef($c[14], $ret, $unit)	if $delta < 12 * 30 * 24 * 60 * 60;
+  return relativef($c[14], "<", $unit)    if $delta < 2 * 30 * 24 * 60 * 60;
+  return relativef($c[14], $ret, $unit) if $delta < 12 * 30 * 24 * 60 * 60;
 
   ## 1 < years < inf
   $unit = "year";
@@ -300,7 +364,23 @@ sub perm_file {
 ## | <perm> | <size> | <filename>
 sub perm_size_file {
   my ($perm, $size, $file) = @_;
-  printf("%s%s%s%-19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+  if($^O eq 'darwin') {
+    if(length($size) == 38) {
+      #$size = " $size ";
+    }
+    elsif(length($size) == 37) {
+      $size .= ' ';
+    }
+    elsif(length($size) == 24) {
+      $size = "            $size            ";
+    }
+    else {
+    }
+    printf("%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+  }
+  else {
+    printf("%s%s%s%19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+  }
 }
 
 ## view: permissions, time, size and filename
@@ -346,16 +426,16 @@ sub left_file {
 
   ## special symlink
   if($file =~ s/->/▻/) {
-  	$esclen += 5;
+    $esclen += 5;
   }
 
   my $padlen = $paddingleft - $strlen + $esclen;
 
   ## cut too long filenames
   if($padlen < 0) {
-  	$file = substr($file, 0, $padlen-7);
-  	$padlen = 0;
-  	$file = $file . "...\e[0m";
+    $file = substr($file, 0, $padlen-7);
+    $padlen = 0;
+    $file = $file . "...\e[0m";
   }
 
   # pad with spaces
@@ -364,6 +444,35 @@ sub left_file {
 
   printf("%s%s%s\n", $file, $d[2], $size);
 }
+ 
+sub config_init {
+  my $config;
+  if(-e "$ENV{HOME}/.config/ls++/ls++.conf") {
+    $config = "$ENV{HOME}/.config/ls++/ls++.conf";
+  }
+  elsif(-e "$ENV{HOME}/.ls++.conf") {
+    $config = "$ENV{HOME}/.ls++.conf";
+  }
+  elsif(-e "$ENV{HOME}/ls++.conf") {
+    $config = "$ENV{HOME}/ls++.conf";
+  }
+  elsif(-e './ls++.conf') {
+    $config = './ls++.conf';
+  }
+  elsif(-e '/etc/ls++.conf') {
+    $config = '/etc/ls++.conf';
+  }
+  else {
+    warn "No configuration file found.\n";
+    exit 1;
+  }
+  print "Config found: $config\n" if($ENV{DEBUG});
+
+  require($config);
+  warn $@ if $@;
+}
+
+=pod
 
 
 
@@ -435,3 +544,4 @@ License GPLv2
 B<l> <http://github.com/mmso/scripts>
 
 =cut
+
