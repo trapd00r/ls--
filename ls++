@@ -141,7 +141,7 @@ my $ls_cmd;
 $ls_cmd = 'ls -hAlv'
   . ' --group-directories-first --color=always --time=ctime --time-style=+%s';
 
-#$^O = 'darwin';
+
 if($^O eq 'darwin') {
   # Cover MacOS.
   $ls_cmd = 'ls -hAlvGc';
@@ -208,6 +208,7 @@ while(<$ls>) {
   }
 
 
+
   ## color permissions
   $perm = perm($perm);
 
@@ -225,6 +226,22 @@ while(<$ls>) {
     #print "$size\n";
     next;
   }
+  else {
+    $size = size($size);
+    if(length($size) == 1) {
+      $size = "  $size  ";
+    }
+    elsif(length($size) == 2) {
+      $size = " $size  ";
+    }
+    elsif(length($size) == 3) {
+      $size = " $size ";
+    }
+    elsif(length($size) == 4) {
+      $size = "$size ";
+    }
+  }
+
 
   ## views
 
@@ -273,8 +290,9 @@ sub size {
   my ($size) = @_;
 
   if($color256) {
+    #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
     return sprintf("% 40s", $size)
-      if ($size =~ s/^(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
+      if ($size =~ s/^\s*(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
     return sprintf("% 27s", $size)
       if ($size =~ s/^(.*)(M)$/$c[7]$1$c[17]$2$c[16]/);
     return sprintf("% 27s", $size)
