@@ -2,13 +2,16 @@
 use vars qw($DEBUG $APP $VERSION);
 
 $APP     = 'ls++';
-$VERSION = 0.215;
+$VERSION = 0.222;
 use strict;
 use open qw/:std :utf8/;
 use utf8;
 use Pod::Usage;
 use Cwd 'abs_path';
 use Getopt::Long;
+
+#TODO Check for $DISPLAY, and use ansi colors if missing
+#TODO Use Term::ExtendedColor
 
 #use Data::Dumper;
 #$Data::Dumper::Terse     = 1;
@@ -158,7 +161,7 @@ while(<$ls>) {
 
   if(/^(.+):$/) { # /tmp: , .:
     my $where = abs_path($1); # resolve ./, $HOME etc
-    printf("$c[10]>\e[1m$c[9]>\e[0m %s\n", $where);
+    printf("$c[10] >\e[1m$c[9]>\e[0m %s\n", $where);
     next;
   }
 
@@ -216,30 +219,33 @@ while(<$ls>) {
     if($size) {
       ## color size
       $size = size($size);
-      $size =~ s/\s+//;
+      $size =~ s/\s{6}//;
     }
     if(!$size) {
       $size = "\0" x 40 . "    ";
 
     }
+    #NOTE
+    # This is the only mode that's supported on BSDs for now
     perm_size_file($perm, $size, $file);
     #print "$size\n";
     next;
   }
   else {
     $size = size($size);
-    if(length($size) == 1) {
-      $size = "  $size  ";
-    }
-    elsif(length($size) == 2) {
-      $size = " $size  ";
-    }
-    elsif(length($size) == 3) {
-      $size = " $size ";
-    }
-    elsif(length($size) == 4) {
-      $size = "$size ";
-    }
+    $size =~ s/^\s{3}(.+)/$1 /;
+    #if(length($size) == 1) {
+    #  $size = "  $size  ";
+    #}
+    #elsif(length($size) == 2) {
+    #  $size = " $size  ";
+    #}
+    #elsif(length($size) == 3) {
+    #  $size = " $size ";
+    #}
+    #elsif(length($size) == 4) {
+    #  $size = "$size ";
+    #}
   }
 
 
@@ -291,15 +297,34 @@ sub size {
 
   if($color256) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
-    return sprintf("% 40s", $size)
-      if ($size =~ s/^\s*(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
-    return sprintf("% 27s", $size)
-      if ($size =~ s/^(.*)(M)$/$c[7]$1$c[17]$2$c[16]/);
-    return sprintf("% 27s", $size)
-      if ($size =~ s/^(.*)(G)$/$c[3]$1$c[17]$2$c[16]/);
-    return sprintf("% 27s", $size) # 1012B
-      if ($size =~ s/^(\d+)$/$c[14]$1$c[17]B$c[16]/);
+
+    # MacOS, BSD
+    if($^O eq 'darwin') {
+      return sprintf("% 40s", $size)
+        if ($size =~ s/^\s*(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
+        # 23 MacOS
+        # 27 GNU
+      return sprintf("% 23s", $size)
+        if ($size =~ s/^(.*)(M)$/$c[7]$1$c[17]$2$c[16]/);
+      return sprintf("% 27s", $size)
+        if ($size =~ s/^(.*)(G)$/$c[3]$1$c[17]$2$c[16]/);
+      return sprintf("% 27s", $size) # 1012B
+        if ($size =~ s/^(\d+)$/$c[14]$1$c[17]B$c[16]/);
+    }
+    # GNU
+    else {
+      return sprintf("% 38s", $size)
+        if ($size =~ s/^\s*(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
+      return sprintf("% 27s", $size)
+        if ($size =~ s/^(.*)(M)$/$c[7]$1$c[17]$2$c[16]/);
+      return sprintf("% 29s", $size)
+        if ($size =~ s/^(.*)(G)$/$c[3]$1$c[17]$2$c[16]/);
+      return sprintf("% 27s", $size) # 1012B
+        if ($size =~ s/^(\d+)$/$c[14]$1$c[17]B$c[16]/);
+    }
   }
+
+  # ANSI
   else {
     return sprintf("% 26s", $size)
       if ($size =~ s/(.*)(K)/$c[2]$1$c[2]$c[17]$2$c[16]/);
@@ -309,7 +334,7 @@ sub size {
       if ($size =~ s/(.*)(G)/$c[3]$1$c[17]$2$c[16]/);
     return sprintf("% 21s", $size) # 1012B
       if ($size =~ s/(\d+)/$c[14]$1$c[17]B$c[16]/);
-    }
+  }
 }
 
 
@@ -465,6 +490,12 @@ sub left_file {
  
 sub config_init {
   my $config;
+
+  if($ENV{DEBUG}) {
+    require("./ls++.conf");
+    return;
+  }
+
   if(-e "$ENV{HOME}/.config/ls++/ls++.conf") {
     $config = "$ENV{HOME}/.config/ls++/ls++.conf";
   }
