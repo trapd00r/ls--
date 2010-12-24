@@ -82,7 +82,7 @@ GetOptions(
 my $curtime = time();
 my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
 
-($color256) ? map { $_ = "$c[0]$_$c[16]" } @d : map { $_ = "$c[1]$_$c[16]" } @d;
+@d = map { $_ = "$c[0]$_\e[0m" } @d;
 
 sub is_file {
   my $what = shift;
