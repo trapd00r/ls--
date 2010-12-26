@@ -15,6 +15,7 @@ WriteMakefile(
   PL_FILES            => {},
 
   PREREQ_PM           => {
+    'Term::ExtendedColor' => 0.16,
   },
 
   EXE_FILES           => ['./ls++'],
