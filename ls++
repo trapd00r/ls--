@@ -7,6 +7,15 @@ use strict;
 use Term::ExtendedColor;
 use Pod::Usage;
 use Getopt::Long;
+use Data::Dumper;
+$Data::Dumper::Terse     = 1;
+$Data::Dumper::Indent    = 1;
+$Data::Dumper::Useqq     = 1;
+$Data::Dumper::Deparse   = 1;
+$Data::Dumper::Quotekeys = 0;
+$Data::Dumper::Sortkeys  = 1;
+
+
 
 my $ls       = '/bin/ls';
 my @ls_opts  = get_ls_cmdline();
@@ -22,7 +31,7 @@ if(not _init_config()) {;
   exit 1;
 }
 
-our(@c, @d, @ignores);
+our(@c, @d, @ignores, %ls_colors);
 
 my $colors = _get_color_support(); #FIXME
 
@@ -130,11 +139,7 @@ sub ls {
       $size =~ s/^\s{3}(.+)/$1 /;
     }
 
-
-our(
-  $opt_perm_size_file, $opt_perm_time_size_file,
-  $opt_perm_file,      $opt_perm_time_file,
-);
+    $file = add_ls_color($file);
 
 
     if($opt_perm_file) {
@@ -154,6 +159,20 @@ our(
       next;
     }
   }
+}
+
+sub add_ls_color {
+  my $file = shift;
+
+  for my $pattern(keys(%ls_colors)) {
+    my $no_ls_color_file = uncolor($file);
+
+    if($no_ls_color_file =~ /$pattern/) {
+      $file = uncolor($file);
+      $file = fg($ls_colors{$pattern}, $file);
+    }
+  }
+  return $file;
 }
 
 sub perm_file {
@@ -373,6 +392,7 @@ sub _init_config {
 
   if($ENV{DEBUG}) {
     require('./ls++.conf');
+    print "Using ./ls++.conf\n" unless $@;
   }
 
   my @locations = (
