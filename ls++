@@ -1,279 +1,205 @@
 #!/usr/bin/perl
-use vars qw($DEBUG $APP $VERSION);
+my $APP = 'ls++';
+use vars qw($VERSION);
+$VERSION = '0.310';
 
-$APP     = 'ls++';
-$VERSION = 0.222;
 use strict;
-use open qw/:std :utf8/;
-use utf8;
+use Term::ExtendedColor;
 use Pod::Usage;
-use Cwd 'abs_path';
 use Getopt::Long;
 
-#TODO Check for $DISPLAY, and use ansi colors if missing
-#TODO Use Term::ExtendedColor
+my $ls       = '/bin/ls';
+my @ls_opts  = get_ls_cmdline();
+my @ls_where = get_ls_where(@ARGV);
 
-#use Data::Dumper;
-#$Data::Dumper::Terse     = 1;
-#$Data::Dumper::Indent    = 1;
-#$Data::Dumper::Useqq     = 1;
-#$Data::Dumper::Deparse   = 1;
-#$Data::Dumper::Quotekeys = 0;
-#$Data::Dumper::Sortkeys  = 1;
-
-if(!-t STDOUT ) {
-  system('/bin/ls', @ARGV); # ls -1
-  exit;
+if(not isa_tty()) {
+  system($ls, @ls_where);
+  exit 0;
 }
 
-config_init();
+if(not _init_config()) {;
+  print STDERR "No configuration file found, exiting...\n";
+  exit 1;
+}
 
-# Imported from config
+our(@c, @d, @ignores);
+
+my $colors = _get_color_support(); #FIXME
+
+
+$ENV{DEBUG} and print "$_ x\n" for @c;
+
 our(
-  @c,
-  @d,           # delimiters
-  $color256,    # 256 color support?
-  $colorscheme, # colorscheme to use?
-  $padding_z,   # size padding
-  @ignores,     # files to be ignored
-  $ln_arrow,    # symlink arrow
-  $ln_color,    # symlink arrow color
-  %ft_colors,   # for LS_COLORS type of coloring
-  %match_files, # colorize specific patterns
+  $opt_perm_size_file, $opt_perm_time_size_file,
+  $opt_perm_file,      $opt_perm_time_file,
 );
-
-our($opt_pf, $opt_psf, $opt_tpf, $opt_tpsf, $opt_ptsf);
 GetOptions(
-  'pf'      => \$opt_pf,
-  'psf'     => \$opt_psf,
-  'tpf'     => \$opt_tpf,
-  'tpsf'    => \$opt_tpsf,
-  'ptsf'    => \$opt_ptsf,
+  'pf'        => \$opt_perm_file,
+  'psf'       => \$opt_perm_size_file,
+  'ptsf'      => \$opt_perm_time_size_file,
 
-  'ansi'=> sub {
-    $color256 = 0;
+  'ansi'      => sub {
+    $colors = 16;
     @c = (
-      "\e[30m",   # NULL              black
-      "\e[30;1m", # NULL              bright black
-      "\e[31m",   # K                 red
-      "\e[31;1m", # G, sec            bright red
-      "\e[32m",   # day               green
-      "\e[32;1m", # +x                bright green
-      "\e[33m",   # +r                yellow
-      "\e[33;1m", # +w, M             bright yellow
-      "\e[34m",   # other             blue
-      "\e[34;1m", # hour              bright blue
-      "\e[35m",   #                   magenta
-      "\e[35;1m", # +s                bright magenta
-      "\e[36m",   #                   cyan
-      "\e[36;1m", # link              bright cyan
-      "\e[37m",   # B, month, delim   white
+      '30', '30;1',
+      '31', '31;1',
+      '32', '32;1',
+      '33', '33;1',
+      '34', '34;1',
+      '35', '35;1',
+      '36', '36;1',
+      '37',
 
-      "\e[33;1m", #
-      "\e[0m",    #                   default
-      "\e[1m",    # Various           bold
-      );
-    },
-  'help'     => sub { print "$APP $VERSION\n\n"; pod2usage(verbose => 1); },
-  'man'      => sub { pod2usage(verbose => 2); },
+      '33;1',
+      '0',
+      '1',
+    );
+    map { $_ = "\e[$_" . 'm' } @c;
+  },
+
+  'm|man'     => sub { pod2usage(verbose => 3); },
+  'h|help'    => sub { pod2usage(verbose => 1); },
+  'v|version' => sub { print "$APP v$VERSION\n" and exit 0; },
+
 );
 
-
-my $curtime = time();
-my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
-
-@d = map { $_ = "$c[0]$_\e[0m" } @d;
-
-sub is_file {
-  my $what = shift;
-  return 1 if(-e $what);
+if($colors > 88) {
+  map { $_ = fg('gray20', $_); } @d;
+}
+else {
+  map { $_ = fg($c[0], $_); } @d;
 }
 
-do {
-  my $i = 0;
-  for(@c) {
-    printf("%s \$c[$i]\e[0m\n", $_);
-    $i++;
-  }
-  $i = 0;
-  for(@d) {
-    printf("%s \$d[$i]\n", $_, $i);
-    $i++;
-  }
-} if($DEBUG);
 
-my @ls_where = ();
-
-my $cmd = undef;
-for(@ARGV) {
-  if(is_file($_)) {
-    push(@ls_where, "'$_'");
-  }
-  else {
-    $cmd = shift;
-  }
-}
-@ls_where = './' if(!@ls_where);
+ls();
 
 
-=for OS
+sub ls {
+  my $view = shift // 'perm_size_file';
+  my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
 
-Mac OS / BSD ls differs from GNU coreutils ls:
+  open(my $ls, '-|', "$ls @ls_opts @ls_where")
+    or die("Cant popen $ls: $!");
 
-BSD   options: -hAlvGc
-Linux options: --hAlv --group-directories-first --color=always --time=ctime
-               --time-style=+%s
+  while(my $line = <$ls>) {
+    #total 1.7M
+    next if $line =~ /^total/;
 
+    # Assume GNU coreutils
+    if($^O eq 'linux') {
+      ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/, $line)
+        unless $line =~ /^\s/;
 
-BSD output:
-
--rw-r--r--  1 trapd00r  staff   3.8K Dec 21 09:24 ls++.conf
-
-Coreutils output:
-
--rw-r--r-- 1 scp1 users 4.0K 1292738451 ls++.conf
-
-There's no way the BSD ls could output ctime for a file, it seems.
-This makes calculating relative times difficult. Not sure how to solve this.
-
-=cut
-
-my $ls_cmd;
-
-# Make the coreutils cmdline the default for now...
-$ls_cmd = 'ls -hAlv'
-  . ' --group-directories-first --color=always --time=ctime --time-style=+%s';
-
-
-if($^O eq 'darwin') {
-  # Cover MacOS.
-  $ls_cmd = 'ls -hAlvGc';
-}
-
-open(my $ls, '-|', "$ls_cmd @ls_where") or die($!);
-
-
-
-while(<$ls>) {
-  s/->/$ln_color$ln_arrow$c[16]/; # FIXME
-
-  next if(/^total/);
-
-  if(/^(.+):$/) { # /tmp: , .:
-    my $where = abs_path($1); # resolve ./, $HOME etc
-    printf("$c[10] >\e[1m$c[9]>\e[0m %s\n", $where);
-    next;
-  }
-
-
-  if($^O eq 'linux') {
-    ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/)
-      unless(/^\s+/); # /tmp:
-
-    ## parse filename separetly to allow for whitespace etc.
-    ($file) = m/.* \d{6,}? (.*)/;
-
-    next if($file =~ join(' ', @ignores));
-  }
-  elsif($^O eq 'darwin') {
-    ($perm, $hlink, $user, $group, $size) = split(/\s+/, $_);
-
-    ($file) = $_ =~ m/.*\d{2,}? (.*)/;
-
-    $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
-
-    next if($file =~ join(' ', @ignores));
-  }
-
-  next if !$file;
-
-  for my $match(keys(%match_files)) {
-    if($file =~ m/$match/) {
-      $file =~ s$(?:\e|\033)\[[0-9;]+m$$; # remove LS_COLORS
-      $file = "$match_files{$match}$file\e[0m";
+      ($file) = $line =~ m/.* \d{6,}? (.+)/;
     }
-  }
+    elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
+      ($perm, $hlink, $user, $group, $size) = split(/\s+/, $line);
+      ($file) = $line =~ m/.*\d{2,}? (.*)/;
 
-  for my $re(keys(%ft_colors)) {
-    if($file =~ m/$re/) {
-      $file =~ s$(?:\e|\033)\[[0-9;]+m$$; # remove LS_COLORS
-      $file = "$ft_colors{$re}$file\e[0m";
+      $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
     }
-  }
-
-  ## calculate relative time
-
-  if($^O eq 'darwin') {
-    $rel = 'foo'; # Do a stat() on every file...
-  }
-  else {
-    ($rel) = relative(time(), $seconds);
-  }
 
 
+    if( (!$file) or ($file =~ join(' ', @ignores)) ) {
+      next;
+    }
 
-  ## color permissions
-  $perm = perm($perm);
+    if($^O eq 'linux') {
+      $rel = relative_time(time(), $seconds);
+    }
+    else {
+      $rel = '';
+    }
+    $perm = perm($perm);
 
-  if($^O eq 'darwin') {
-    if($size) {
-      ## color size
+    if( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
       $size = size($size);
       $size =~ s/\s{6}//;
+
+      $size = "\0" x 40 . "    " if !$size;
+
+      # The only thing supported on these platforms for now.
+      # Patches very welcome.
+      perm_size_file($perm, $size, $file);
+      next;
     }
-    if(!$size) {
-      $size = "\0" x 40 . "    ";
 
+    # OK, probably GNU/Linux
+    else {
+      $size = size($size);
+      $size =~ s/^\s{3}(.+)/$1 /;
     }
-    #NOTE
-    # This is the only mode that's supported on BSDs for now
-    perm_size_file($perm, $size, $file);
-    #print "$size\n";
-    next;
-  }
-  else {
-    $size = size($size);
-    $size =~ s/^\s{3}(.+)/$1 /;
-    #if(length($size) == 1) {
-    #  $size = "  $size  ";
-    #}
-    #elsif(length($size) == 2) {
-    #  $size = " $size  ";
-    #}
-    #elsif(length($size) == 3) {
-    #  $size = " $size ";
-    #}
-    #elsif(length($size) == 4) {
-    #  $size = "$size ";
-    #}
-  }
 
 
-  ## views
+our(
+  $opt_perm_size_file, $opt_perm_time_size_file,
+  $opt_perm_file,      $opt_perm_time_file,
+);
 
-  if($opt_pf) {
-    perm_file($perm, $file);
-  }
-  elsif($opt_psf) {
-    perm_size_file($perm, $size, $file);
-  }
-  elsif($opt_tpf) {
-    time_perm_file($rel, $perm, $file);
-  }
-  elsif($opt_tpsf) {
-    time_perm_size_file($rel, $perm, $size, $file);
-  }
-  elsif($opt_ptsf) {
-    perm_time_size_file($perm, $rel, $size, $file);
-  }
-  else {
-    perm_time_size_file($perm, $rel,  $size, $file);
+
+    if($opt_perm_file) {
+      perm_file($perm, $file);
+      next;
+    }
+    elsif($opt_perm_time_file) {
+      perm_time_file($perm, $rel, $file);
+      next;
+    }
+    elsif($opt_perm_size_file) {
+      perm_size_file($perm, $size, $file);
+      next;
+    }
+    else {
+      perm_time_size_file($perm, $rel, $size, $file);
+      next;
+    }
   }
 }
-close($ls);
+
+sub perm_file {
+  my ($perm, $file) = @_;
+  printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
+}
 
 
-## colorizes permissions
+sub perm_time_size_file {
+  my ($perm, $rel, $size, $file) = @_;
+  printf("%s %s%s%s%s%s%s%s\n",
+    $d[0],
+    $perm,
+    $d[3],
+    $rel,
+    $d[2],
+    $size,
+    $d[2],
+    $file,
+  );
+}
+
+sub perm_size_file {
+  my ($perm, $size, $file) = @_;
+  if(get_os() eq 'darwin') {
+    if(length($size) == 38) {
+      #$size = " $size ";
+    }
+    elsif(length($size) == 37) {
+      $size .= ' ';
+    }
+    elsif(length($size) == 24) {
+      $size = "            $size            ";
+    }
+    else {
+    }
+    printf("%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+  }
+  else {
+    printf("%s%s%s%19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+  }
+}
+
+
+
+
 sub perm {
   my ($perm) = @_;
 
@@ -291,15 +217,15 @@ sub perm {
   return $perm;
 }
 
-## colors the size string depending on whether its K, M, G or prefixless
 sub size {
   my ($size) = @_;
 
-  if($color256) {
+  #FIXME
+  if($colors > 16) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
 
     # MacOS, BSD
-    if($^O eq 'darwin') {
+    if(get_os() eq 'darwin') {
       return sprintf("% 40s", $size)
         if ($size =~ s/^\s*(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
         # 23 MacOS
@@ -339,8 +265,14 @@ sub size {
 
 
 
-## calculates relative time from the current time in seconds
-sub relative {
+sub relative_time_format {
+  my ($color, $string, $unit) = @_;
+  return sprintf("%s%-3s%-3s%s", $color, $string, $unit, $c[16]);
+}
+
+
+
+sub relative_time {
   my ($cur, $sec) = @_;
   my $delta = $cur - $sec;
   my ($unit, $ret);
@@ -349,181 +281,147 @@ sub relative {
   $unit = "sec ";
   $ret = $delta;
 
-  return relativef($c[3], "<", $unit)   if $delta < 10;
-  return relativef($c[3], $ret, $unit)  if $delta < 60;
+  return relative_time_format($c[3], "<", $unit)
+    if $delta < 10;
+  return relative_time_format($c[3], $ret, $unit)
+    if $delta < 60;
 
   ## 1 < min < 45
   $unit = "min ";
   $ret = int($ret/60);
 
-  return relativef($c[15], "<", $unit)    if $delta < 2 * 60;
-  return relativef($c[15], $ret, $unit) if $delta < 45 * 60;
+  return relative_time_format($c[15], "<", $unit)
+    if $delta < 2 * 60;
+  return relative_time_format($c[15], $ret, $unit)
+    if $delta < 45 * 60;
 
   ## 0.75 < hour < 42
   $unit = "hour";
   $ret = int($ret/60);
 
-  return relativef($c[9], "<", $unit)   if $delta < 90 * 60;
-  return relativef($c[9], $ret, $unit)  if $delta < 24 * 60 * 60;
-  return relativef($c[9], $ret, $unit)  if $delta < 30 * 60 * 60;
-  return relativef($c[9], $ret, $unit)  if $delta < 36 * 60 * 60;
+  return relative_time_format($c[9], "<", $unit) 
+    if $delta < 90 * 60;
+  return relative_time_format($c[9], $ret, $unit)
+    if $delta < 24 * 60 * 60;
+  return relative_time_format($c[9], $ret, $unit)
+    if $delta < 30 * 60 * 60;
+  return relative_time_format($c[9], $ret, $unit)
+    if $delta < 36 * 60 * 60;
 
   ## 0.75 < day < 30
   $unit = "day ";
   $ret = int($ret/24);
 
-  return relativef($c[4], "<", $unit)   if $delta < 48 * 60 * 60;
-  return relativef($c[4], $ret, $unit)  if $delta < 7 * 24 * 60 * 60;
-  return relativef($c[4], $ret, $unit)  if $delta < 14 * 24 * 60 * 60;
-  return relativef($c[4], $ret, $unit)  if $delta < 28 * 24 * 60 * 60;
-  return relativef($c[4], $ret, $unit)  if $delta < 30 * 24 * 60 * 60;
+  return relative_time_format($c[4], "<", $unit) 
+    if $delta < 48 * 60 * 60;
+  return relative_time_format($c[4], $ret, $unit)
+    if $delta < 7 * 24 * 60 * 60;
+  return relative_time_format($c[4], $ret, $unit)
+    if $delta < 14 * 24 * 60 * 60;
+  return relative_time_format($c[4], $ret, $unit)
+    if $delta < 28 * 24 * 60 * 60;
+  return relative_time_format($c[4], $ret, $unit)
+    if $delta < 30 * 24 * 60 * 60;
 
   ## 1 < month < 12
   $unit = "mon ";
   $ret = int($ret/30);
 
-  return relativef($c[14], "<", $unit)    if $delta < 2 * 30 * 24 * 60 * 60;
-  return relativef($c[14], $ret, $unit) if $delta < 12 * 30 * 24 * 60 * 60;
+  return relative_time_format($c[14], "<", $unit)
+    if $delta < 2 * 30 * 24 * 60 * 60;
+  return relative_time_format($c[14], $ret, $unit)
+    if $delta < 12 * 30 * 24 * 60 * 60;
 
   ## 1 < years < inf
   $unit = "year";
   $ret = int($ret/12);
 
-  return relativef($c[0], $ret, $unit);
+  return relative_time_format($c[0], $ret, $unit);
 }
 
-## format for relative time
-sub relativef {
-  my ($color, $string, $unit) = @_;
-  return sprintf("%s%-3s%-3s%s", $color, $string, $unit, $c[16]);
-}
 
-sub perm_file {
-  my ($perm, $file) = @_;
-  printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
-}
-
-## view: permissions, size and filename
-## | <perm> | <size> | <filename>
-sub perm_size_file {
-  my ($perm, $size, $file) = @_;
-  if($^O eq 'darwin') {
-    if(length($size) == 38) {
-      #$size = " $size ";
-    }
-    elsif(length($size) == 37) {
-      $size .= ' ';
-    }
-    elsif(length($size) == 24) {
-      $size = "            $size            ";
-    }
-    else {
-    }
-    printf("%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+sub _get_color_support {
+  my $colors = 8;
+  if(
+    $ENV{TERM} eq 'xterm'
+      or($ENV{TERM} eq 'rxvt-256-color')
+      or($ENV{TERM} =~ /screen-256/)
+      or($ENV{TERM} eq 'Eterm-256color')
+      or($ENV{TERM} eq 'gnome-256color')
+      or($ENV{TERM} eq 'konsole-256color')
+      or($ENV{TERM} eq 'putty-256color')
+      or($ENV{TERM} =~ /u?rxvt-256color/)
+  ) {
+    $colors = 256;
+  }
+  elsif($ENV{TERM} eq 'rxvt-unicode') {
+    $colors = 88;
+  }
+  elsif($ENV{TERM} eq 'screen') {
+    $colors = 8;
   }
   else {
-    printf("%s%s%s%19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
-  }
-}
-
-## view: permissions, time, size and filename
-## <time> | <perm> | <filename>
-sub time_perm_file {
-  my ($perm, $rel, $file) = @_;
-  printf("%s%s%s%s%s\n", $rel, $d[0], $perm, $d[3], $file);
-}
-
-## view: time, permissions, size and filename
-## <time> | <perm> | <size> | <filename>
-sub time_perm_size_file {
-  my ($perm, $rel, $size, $file) = @_;
-  printf("%s%s%s%s%s%s%s\n", $rel, $d[0], $perm, $d[3], $size, $d[2], $file);
-}
-
-## view: permissions, time, size and filename
-## | <perm> | <size> | <filename>
-sub perm_time_size_file {
-  my ($perm, $rel, $size, $file) = @_;
-  printf("%s %s%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $rel, $d[2], $size, $d[2], $file);
-}
-
-## view: file to the right
-## <var> | <filename>
-sub right_file {
-  my ($var, $file, $paddingright) = @_;
-  printf("%${paddingright}s%s%s\n", $var, $d[2], $file);
-}
-
-sub left_file {
-  my ($file, $size, $paddingleft) = @_;
-
-  ## first row has a \e[0m
-  $file =~ s/^\e\[0m//g;
-
-  my ($esclen, $strlen) = (0, length($file));
-
-  ## for each escape sequence, pad the length of it
-  while($file =~ m/\e\[(.*?m)/g) {
-    $esclen += length($1);
+    chomp($colors = `tput colors`); # fail silently
   }
 
-  ## special symlink
-  if($file =~ s/->/▻/) {
-    $esclen += 5;
-  }
-
-  my $padlen = $paddingleft - $strlen + $esclen;
-
-  ## cut too long filenames
-  if($padlen < 0) {
-    $file = substr($file, 0, $padlen-7);
-    $padlen = 0;
-    $file = $file . "...\e[0m";
-  }
-
-  # pad with spaces
-  #$file = $file . ( ' ' x $padlen);
-  $file = ( ' ' x $padlen) . $file;
-
-  printf("%s%s%s\n", $file, $d[2], $size);
+  return $colors;
 }
- 
-sub config_init {
+
+
+sub _init_config {
   my $config;
 
   if($ENV{DEBUG}) {
-    require("./ls++.conf");
-    return;
+    require('./ls++.conf');
   }
 
-  if(-e "$ENV{HOME}/.config/ls++/ls++.conf") {
-    $config = "$ENV{HOME}/.config/ls++/ls++.conf";
-  }
-  elsif(-e "$ENV{HOME}/.ls++.conf") {
-    $config = "$ENV{HOME}/.ls++.conf";
-  }
-  elsif(-e "$ENV{HOME}/ls++.conf") {
-    $config = "$ENV{HOME}/ls++.conf";
-  }
-  elsif(-e './ls++.conf') {
-    $config = './ls++.conf';
-  }
-  elsif(-e '/etc/ls++.conf') {
-    $config = '/etc/ls++.conf';
-  }
-  else {
-    warn "No configuration file found.\n";
-    exit 1;
-  }
-  print "Config found: $config\n" if($ENV{DEBUG});
+  my @locations = (
+    "$ENV{XDG_CONFIG_HOME}/ls++/ls++.conf",
+    "$ENV{HOME}/.config/ls++/ls++.conf",
+    "$ENV{HOME}/.ls++.conf",
+    "$ENV{HOME}/.ls++/ls++.conf",
+    "./ls++.conf",
+    "/etc/ls++.conf",
+  );
 
-  require($config);
-  warn $@ if $@;
+  for my $conf(@locations) {
+    if(-f $conf) {
+      require $conf;
+      if($@) {
+        next;
+      }
+      return 1;
+    }
+  }
+  return 0;
 }
 
-=pod
 
+sub isa_tty {
+  return 1 if -t STDOUT;
+  return 0;
+}
 
+sub get_ls_where {
+  my @files;
+  for(@_) {
+    if(-e $_) {
+      push(@files, $_);
+    }
+  }
+  return (wantarray()) ? @files : scalar(@files);
+}
+
+sub get_ls_cmdline {
+  my $os = get_os();
+  ( ($os eq 'darwin') or ($os =~ /.+bsd$/) ) and return '-AlvGc';
+  return '-hAlv --group-directories-first --color=always --time=ctime ' .
+         '--time-style=+%s';
+}
+
+sub get_os {
+  return $^O;
+}
 
 
 =pod
@@ -538,17 +436,15 @@ ls++ [view] (files)
 
 =head1 DESCRIPTION
 
-ls++ is what GNU ls would look like with extensive makeup applied.
+ls++ is what GNU/BSD ls would look like with extensive makeup applied.
 
 =head1 OPTIONS
 
 =head3 Views
 
-  --pf    permissions, file
-  --psf   permissions, size, file
-  --tpf   time, permissions, file
-  --tpsf  time, permissions, size, file (default)
-  --ptsf  permissions, time, size, file
+  -pf    permissions, file
+  -psf   permissions, size, file
+  -ptsf  permissions, time, size, file
 
 =head3 COLORS
 
@@ -572,25 +468,31 @@ mtimes.
 
 I really liked that idea, but there were a couple of annoyances, so I forked the
 project and added a configuration file, support for flags that'll control the
-different views and possiblity to ignore certain files.
+different views and possiblity to ignore certain files amongst other things.
 
 =head1 AUTHOR
 
-Written by Magnus Woldrich
+  Magnus Woldrich
+  CPAN ID: WOLDRICH
+  magnus@trapd00r.se
+  http://japh.se
 
 =head1 REPORTING BUGS
 
-Report bugs to trapd00r@trapd00r.se
+Report bugs and/or feature requests to <magnus@trapd00r.se>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2010 Magnus Woldrich
-
-License GPLv2
+Copyright (C) 2010 Magnus Woldrich. All right reserved.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =head1 SEE ALSO
+
+ls++.conf(1)
 
 B<l> <http://github.com/mmso/scripts>
 
 =cut
+
 
