@@ -22,6 +22,7 @@ WriteMakefile(
 
   MAN1PODS            => {
     './ls++'          => 'blib/man1/ls++.1',
+    './ls++.conf'     => 'blib/man1/ls++.conf.1',
   },
 
   MIN_PERL_VERSION => '5.10.0',
