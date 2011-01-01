@@ -94,7 +94,6 @@ sub ls {
     #total 1.7M
     next if $line =~ /^total/;
 
-    $line =~ s/->/fg($c[2], '▪▶')/e;
 
     # Assume GNU coreutils
     if($^O eq 'linux') {
@@ -119,6 +118,7 @@ sub ls {
     if(!defined($file)) { # ignored;
       next;
     }
+    $file =~ s/-> (.+)/fg($c[15], '▪▶ ') . fg('italic', fg($c[4], $1))/e;
 
     if($^O eq 'linux') {
       $rel = relative_time(time(), $seconds);
