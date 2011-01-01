@@ -1,20 +1,20 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.310';
+$VERSION = '0.315';
 
 use strict;
 use Term::ExtendedColor;
 use Pod::Usage;
 use Getopt::Long;
-use Data::Dumper;
-$Data::Dumper::Terse     = 1;
-$Data::Dumper::Indent    = 1;
-$Data::Dumper::Useqq     = 1;
-$Data::Dumper::Deparse   = 1;
-$Data::Dumper::Quotekeys = 0;
-$Data::Dumper::Sortkeys  = 1;
 
+#use Data::Dumper;
+#$Data::Dumper::Terse     = 1;
+#$Data::Dumper::Indent    = 1;
+#$Data::Dumper::Useqq     = 1;
+#$Data::Dumper::Deparse   = 1;
+#$Data::Dumper::Quotekeys = 0;
+#$Data::Dumper::Sortkeys  = 1;
 
 
 my $ls       = '/bin/ls';
@@ -31,7 +31,7 @@ if(not _init_config()) {;
   exit 1;
 }
 
-our(@c, @d, @ignores, %ls_colors);
+our(@c, @d, %ls_colors);
 
 my $colors = _get_color_support(); #FIXME
 
@@ -94,6 +94,8 @@ sub ls {
     #total 1.7M
     next if $line =~ /^total/;
 
+    $line =~ s/->/fg($c[2], '▪▶')/e;
+
     # Assume GNU coreutils
     if($^O eq 'linux') {
       ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/, $line)
@@ -109,7 +111,12 @@ sub ls {
     }
 
 
-    if( (!$file) or ($file =~ join(' ', @ignores)) ) {
+    if( (!$file) ) {
+      next;
+    }
+    $file = add_ls_color($file);
+
+    if(!defined($file)) { # ignored;
       next;
     }
 
@@ -139,7 +146,6 @@ sub ls {
       $size =~ s/^\s{3}(.+)/$1 /;
     }
 
-    $file = add_ls_color($file);
 
 
     if($opt_perm_file) {
@@ -168,7 +174,10 @@ sub add_ls_color {
     my $no_ls_color_file = uncolor($file);
 
     if($no_ls_color_file =~ /$pattern/) {
-      $file = uncolor($file);
+      if($ls_colors{$pattern} eq 'IGNORE') {
+        return undef;
+      }
+      $file = $no_ls_color_file;
       $file = fg($ls_colors{$pattern}, $file);
     }
   }
@@ -223,15 +232,16 @@ sub perm {
   my ($perm) = @_;
 
   $perm =~ s/-/$d[1]/g;
-  $perm =~ s/(r)/$c[6]$1$c[16]/g;
-  $perm =~ s/(w)/$c[7]$1$c[16]/g;
-  $perm =~ s/(x)/$c[5]$1$c[16]/g;
-  $perm =~ s/(d)/$c[3]$c[17]$1$c[16]/g;
-  $perm =~ s/(l)/$c[8]$c[13]$1$c[16]/g;
-  $perm =~ s/(s)/$c[11]$1$c[16]/g;
-  $perm =~ s/(S)/$c[8]$1$c[16]/g;
-  $perm =~ s/(t)/$c[8]$1$c[16]/g;
-  $perm =~ s/(T)/$c[8]$c[17]$1$c[16]/g;
+  $perm =~ s/(r)/fg($c[6], $1)/eg;
+  $perm =~ s/(w)/fg($c[7], $1)/eg;
+  $perm =~ s/(x)/fg($c[5], $1)/eg;
+
+  $perm =~ s/(d)/fg($c[3],  fg('bold', $1))/eg;
+  $perm =~ s/(l)/fg($c[8],  fg('bold', $1))/eg;
+  $perm =~ s/(s)/fg($c[11], $1)/eg;
+  $perm =~ s/(S)/fg($c[8],  $1)/eg;
+  $perm =~ s/(t)/fg($c[8],  $1)/eg;
+  $perm =~ s/(T)/fg($c[8],  fg('bold', $1))/eg;
 
   return $perm;
 }
@@ -246,26 +256,49 @@ sub size {
     # MacOS, BSD
     if(get_os() eq 'darwin') {
       return sprintf("% 40s", $size)
-        if ($size =~ s/^\s*(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
+        if ($size =~ s/^\s*(.*)(K)$/fg($c[2], $1); fg($c[2], $2)/e);
         # 23 MacOS
         # 27 GNU
       return sprintf("% 23s", $size)
-        if ($size =~ s/^(.*)(M)$/$c[7]$1$c[17]$2$c[16]/);
+        if ($size =~ s/^(.*)(M)$/fg($c[7], $1); fg($c[17], $2)/e);
       return sprintf("% 27s", $size)
-        if ($size =~ s/^(.*)(G)$/$c[3]$1$c[17]$2$c[16]/);
+        if ($size =~ s/^(.*)(G)$/fg($c[3], $1); fg($c[17], $2)/e);
       return sprintf("% 27s", $size) # 1012B
-        if ($size =~ s/^(\d+)$/$c[14]$1$c[17]B$c[16]/);
+        if ($size =~ s/^(\d+)$/fg($c[14], $1); fg($c[17], 'B')/e);
     }
     # GNU
     else {
-      return sprintf("% 38s", $size)
-        if ($size =~ s/^\s*(.*)(K)$/$c[2]$1$c[2]$c[17]$2$c[16]/);
-      return sprintf("% 27s", $size)
-        if ($size =~ s/^(.*)(M)$/$c[7]$1$c[17]$2$c[16]/);
-      return sprintf("% 29s", $size)
-        if ($size =~ s/^(.*)(G)$/$c[3]$1$c[17]$2$c[16]/);
-      return sprintf("% 27s", $size) # 1012B
-        if ($size =~ s/^(\d+)$/$c[14]$1$c[17]B$c[16]/);
+      if($size =~ m/^(\S+)(K)/) {
+        $size = sprintf("% 27s",
+          fg($c[7], sprintf("% 4g", $1))
+            . fg($c[2], fg('bold', $2))
+          );
+      }
+      elsif($size =~ m/^(\S+)(M)/) {
+        $size = sprintf("% 29s",
+          fg($c[7], sprintf("% 4g", $1))
+            . fg($c[4], fg('bold', $2))
+          );
+      }
+      elsif($size =~ m/^(\S+)(G)/) {
+        $size = sprintf("% 27s",
+          fg($c[7], sprintf("% 4g", $1))
+            . fg($c[3], fg('bold', $2))
+          );
+      }
+      elsif($size =~ m/^(\d+)/) {
+        $size = sprintf("% 27s",
+          fg($c[7], sprintf("% 4g", $1))
+            . fg($c[14], fg('bold', 'B'))
+          );
+      }
+      # return sprintf("% 27s", $size)
+      #   if ($size =~ s/^(.*)(M)$/fg($c[7], $1);fg($c[17], $2)/e);
+      # return sprintf("% 29s", $size)
+      #   if ($size =~ s/^(.*)(G)$/fg($c[3], $1);fg($c[17], $2)/e);
+      # return sprintf("% 27s", $size) # 1012B
+      #   if ($size =~ s/^(\d+)$/fg($c[14], $1);fg($c[17], 'B')/e);
+      return $size;
     }
   }
 
@@ -286,7 +319,7 @@ sub size {
 
 sub relative_time_format {
   my ($color, $string, $unit) = @_;
-  return sprintf("%s%-3s%-3s%s", $color, $string, $unit, $c[16]);
+  return sprintf("%s%-3s%-3s", $color, $string, $unit);
 }
 
 
@@ -300,62 +333,62 @@ sub relative_time {
   $unit = "sec ";
   $ret = $delta;
 
-  return relative_time_format($c[3], "<", $unit)
+  return relative_time_format(fg($c[3]), "<", $unit)
     if $delta < 10;
-  return relative_time_format($c[3], $ret, $unit)
+  return relative_time_format(fg($c[3]), $ret, $unit)
     if $delta < 60;
 
   ## 1 < min < 45
   $unit = "min ";
   $ret = int($ret/60);
 
-  return relative_time_format($c[15], "<", $unit)
+  return relative_time_format(fg($c[15]), "<", $unit)
     if $delta < 2 * 60;
-  return relative_time_format($c[15], $ret, $unit)
+  return relative_time_format(fg($c[15]), $ret, $unit)
     if $delta < 45 * 60;
 
   ## 0.75 < hour < 42
   $unit = "hour";
   $ret = int($ret/60);
 
-  return relative_time_format($c[9], "<", $unit) 
+  return relative_time_format(fg($c[9]), "<", $unit) 
     if $delta < 90 * 60;
-  return relative_time_format($c[9], $ret, $unit)
+  return relative_time_format(fg($c[9]), $ret, $unit)
     if $delta < 24 * 60 * 60;
-  return relative_time_format($c[9], $ret, $unit)
+  return relative_time_format(fg($c[9]), $ret, $unit)
     if $delta < 30 * 60 * 60;
-  return relative_time_format($c[9], $ret, $unit)
+  return relative_time_format(fg($c[9]), $ret, $unit)
     if $delta < 36 * 60 * 60;
 
   ## 0.75 < day < 30
   $unit = "day ";
   $ret = int($ret/24);
 
-  return relative_time_format($c[4], "<", $unit) 
+  return relative_time_format(fg($c[4]), "<", $unit) 
     if $delta < 48 * 60 * 60;
-  return relative_time_format($c[4], $ret, $unit)
+  return relative_time_format(fg($c[4]), $ret, $unit)
     if $delta < 7 * 24 * 60 * 60;
-  return relative_time_format($c[4], $ret, $unit)
+  return relative_time_format(fg($c[4]), $ret, $unit)
     if $delta < 14 * 24 * 60 * 60;
-  return relative_time_format($c[4], $ret, $unit)
+  return relative_time_format(fg($c[4]), $ret, $unit)
     if $delta < 28 * 24 * 60 * 60;
-  return relative_time_format($c[4], $ret, $unit)
+  return relative_time_format(fg($c[4]), $ret, $unit)
     if $delta < 30 * 24 * 60 * 60;
 
   ## 1 < month < 12
   $unit = "mon ";
   $ret = int($ret/30);
 
-  return relative_time_format($c[14], "<", $unit)
+  return relative_time_format(fg($c[14]), "<", $unit)
     if $delta < 2 * 30 * 24 * 60 * 60;
-  return relative_time_format($c[14], $ret, $unit)
+  return relative_time_format(fg($c[14]), $ret, $unit)
     if $delta < 12 * 30 * 24 * 60 * 60;
 
   ## 1 < years < inf
   $unit = "year";
   $ret = int($ret/12);
 
-  return relative_time_format($c[0], $ret, $unit);
+  return relative_time_format(fg($c[0]), $ret, $unit);
 }
 
 
