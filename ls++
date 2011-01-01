@@ -288,7 +288,7 @@ sub size {
       }
       elsif($size =~ m/^(\d+)/) {
         $size = sprintf("% 27s",
-          fg($c[7], sprintf("% 4g", $1))
+          fg($c[7], sprintf("%4d", $1))
             . fg($c[14], fg('bold', 'B'))
           );
       }
