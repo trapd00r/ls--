@@ -252,11 +252,11 @@ sub perm {
   my ($perm) = @_;
 
   $perm =~ s/-/$d[1]/g;
-  $perm =~ s/(r)/fg($c[6], $1)/eg;
+  $perm =~ s/(r)/fg($c[2], $1)/eg;
   $perm =~ s/(w)/fg($c[7], $1)/eg;
-  $perm =~ s/(x)/fg($c[5], $1)/eg;
+  $perm =~ s/(x)/fg($c[1], $1)/eg;
 
-  $perm =~ s/(d)/fg($c[3],  fg('bold', $1))/eg;
+  $perm =~ s/(d)/fg($c[2],  fg('bold', $1))/eg;
   $perm =~ s/(l)/fg($c[8],  fg('bold', $1))/eg;
   $perm =~ s/(s)/fg($c[11], $1)/eg;
   $perm =~ s/(S)/fg($c[8],  $1)/eg;
