@@ -453,11 +453,11 @@ sub _init_config {
   }
 
   my @locations = (
+    "./ls++.conf",
     "$ENV{XDG_CONFIG_HOME}/ls++/ls++.conf",
     "$ENV{HOME}/.config/ls++/ls++.conf",
     "$ENV{HOME}/.ls++.conf",
     "$ENV{HOME}/.ls++/ls++.conf",
-    "./ls++.conf",
     "/etc/ls++.conf",
   );
 
