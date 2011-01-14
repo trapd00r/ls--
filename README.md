@@ -8,7 +8,17 @@ ls++ [view] (files)
 
 # DESCRIPTION
 
-  ![ls++ screenshot](http://github.com/trapd00r/ls--/raw/master/extra/shot.png "ls++ screenshot")
+### GNU/Linux
+
+  ![GNU/Linux screenshot](http://perl.japh.se/devel/ls++/ls++_gnu_linux.png)
+
+### MacOSX / *BSD
+
+  ![MacOSX screenshot](http://perl.japh.se/devel/ls++/ls++_bsd_macos.png)
+
+### GNU/Linux TTY/VC
+
+  ![GNU/Linux TTY](http://perl.japh.se/devel/ls++/ls++_gnu_linux_tty.png)
 
 # OPTIONS
 
@@ -47,9 +57,10 @@ Report bugs to trapd00r@trapd00r.se
 
 # COPYRIGHT
 
-Copyright (C) 2010 Magnus Woldrich
+Copyright (C) 2010, 2010 Magnus Woldrich
 
-License GPLv2
+License: PerlArtistic
+
 
 # SEE ALSO
 
