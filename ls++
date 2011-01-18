@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.320';
+$VERSION = '0.321';
 
 use strict;
-use Term::ExtendedColor;
+use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
 
