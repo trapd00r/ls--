@@ -32,6 +32,16 @@ ls++ [view] (files)
     --help  show the help and exit
     --man   show the manpage and exit
 
+# INSTALLATION
+
+    cpan Term::ExtendedColor
+    git clone git://github.com/trapd00r/ls--.git
+    cd ls--
+    perl Makefile.PL
+    make && su -c 'make install'
+
+    cp ls++.conf $HOME/.ls++.conf
+
 # HISTORY
 
 I wanted to re-arrange the ls output just like one can do with the -printf
