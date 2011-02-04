@@ -10,15 +10,15 @@ ls++ [view] (files)
 
 ### GNU/Linux
 
-  ![GNU/Linux screenshot](http://perl.japh.se/devel/ls++/ls++_gnu_linux.png)
+  ![GNU/Linux screenshot](http://perl.japh.se/devel/App-ls++/ls++_gnu_linux.png)
 
 ### MacOSX / *BSD
 
-  ![MacOSX screenshot](http://perl.japh.se/devel/ls++/ls++_bsd_macos.png)
+  ![MacOSX screenshot](http://perl.japh.se/devel/App-ls++/ls++_bsd_macos.png)
 
 ### GNU/Linux TTY/VC
 
-  ![GNU/Linux TTY](http://perl.japh.se/devel/ls++/ls++_gnu_linux_tty.png)
+  ![GNU/Linux TTY](http://perl.japh.se/devel/App-ls++/ls++_gnu_linux_tty.png)
 
 # OPTIONS
 
