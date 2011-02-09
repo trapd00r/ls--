@@ -1,9 +1,10 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.321';
+$VERSION = '0.330';
 
 use strict;
+use warnings FATAL => 'all';
 use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
@@ -23,12 +24,11 @@ my @ls_where = get_ls_where(@ARGV);
 
 if(not isa_tty()) {
   system($ls, @ls_where);
-  exit 0;
+  exit;
 }
 
 if(not _init_config()) {;
-  print STDERR "No configuration file found, exiting...\n";
-  exit 1;
+  die "No configuration file found\n";
 }
 
 our(@c, @d, %ls_colors);
@@ -483,7 +483,7 @@ sub get_ls_where {
   my @files;
   for(@_) {
     if(-e $_) {
-      push(@files, $_);
+      push(@files, quotemeta($_));
     }
   }
   return (wantarray()) ? @files : scalar(@files);
@@ -501,6 +501,9 @@ sub get_os {
 }
 
 
+__END__
+
+
 =pod
 
 =head1 NAME
@@ -509,7 +512,7 @@ ls++ - colorized ls on steroids
 
 =head1 USAGE
 
-ls++ [view] (files)
+ls++ [VIEW] [FILE]
 
 =head1 DESCRIPTION
 
@@ -554,22 +557,24 @@ different views and possiblity to ignore certain files amongst other things.
   magnus@trapd00r.se
   http://japh.se
 
-=head1 REPORTING BUGS
+=head1 CONTRIBUTORS
 
-Report bugs and/or feature requests to <magnus@trapd00r.se>
+The relative time calculations is made by Mattias Svanström.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2010 Magnus Woldrich. All right reserved.
-This program is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+Copyright 2010, 2011 the B<ls++> L</AUTHOR> and L</CONTRIBUTORS> as listed
+above.
+
+=head1 LICENSE
+
+This application is free software; you may redistribute it and/or modify it
+under the same terms as Perl itself
 
 =head1 SEE ALSO
 
-ls++.conf(1)
+L<ls++.conf(1)>
 
 B<l> <http://github.com/mmso/scripts>
 
 =cut
-
-
