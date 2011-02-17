@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.330';
+$VERSION = '0.331';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -70,7 +70,7 @@ GetOptions(
 
 );
 
-if(!$ENV{DISPLAY}) {
+if( !(exists($ENV{DISPLAY})) and ($ENV{TERM} =~ m/^linux/) ) {
   @d = (' ', ' ', ' ', ' ');
   $ENV{LS_COLORS} = '';
   $colors = 16;
