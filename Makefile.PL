@@ -24,6 +24,7 @@ WriteMakefile1(
     },
     MAN1PODS            => {
       'ls++'            => 'blib/man1/ls++.1',
+      'ls++.conf'       => 'blib/man1/ls++.conf.1',
       },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'ls++-*' },
