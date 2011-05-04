@@ -1,21 +1,12 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.331';
+$VERSION = '0.340';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
-
-#use Data::Dumper;
-#$Data::Dumper::Terse     = 1;
-#$Data::Dumper::Indent    = 1;
-#$Data::Dumper::Useqq     = 1;
-#$Data::Dumper::Deparse   = 1;
-#$Data::Dumper::Quotekeys = 0;
-#$Data::Dumper::Sortkeys  = 1;
-
 
 my $ls       = '/bin/ls';
 my @ls_opts  = get_ls_cmdline();
@@ -32,18 +23,28 @@ if(not _init_config()) {;
 
 our(@c, @d, %ls_colors);
 
-my $colors = _get_color_support(); #FIXME
+my $colors = _get_color_support();
 
 $ENV{DEBUG} and print "$_ x\n" for @c;
 
-our(
-  $opt_perm_size_file, $opt_perm_time_size_file,
-  $opt_perm_file,      $opt_perm_time_file,
+my $opt = {
+  perm_file           => undef,
+  perm_time_file      => undef,
+  perm_size_file      => undef,
+  perm_time_size_file => undef,
+};
+
+Getopt::Long::Configure(
+  qw(
+    pass_through
+    no_auto_abbrev
+  )
 );
+
 GetOptions(
-  'pf'        => \$opt_perm_file,
-  'psf'       => \$opt_perm_size_file,
-  'ptsf'      => \$opt_perm_time_size_file,
+  'pf'        => \$opt->{perm_file},
+  'psf'       => \$opt->{perm_size_file},
+  'ptsf'      => \$opt->{perm_time_size_file},
 
   'ansi'      => sub {
     $colors = 16;
@@ -90,6 +91,7 @@ if( !(exists($ENV{DISPLAY})) and ($ENV{TERM} =~ m/^linux/) ) {
   );
   map { $_ = "\e[$_" . 'm' } @c;
 }
+
 
 if($colors > 88) {
   map { $_ = fg('gray20', $_); } @d;
@@ -167,15 +169,15 @@ sub ls {
 
 
 
-    if($opt_perm_file) {
+    if($opt->{perm_file}) {
       perm_file($perm, $file);
       next;
     }
-    elsif($opt_perm_time_file) {
+    elsif($opt->{perm_time_file}) {
       perm_time_file($perm, $rel, $file);
       next;
     }
-    elsif($opt_perm_size_file) {
+    elsif($opt->{perm_size_file}) {
       perm_size_file($perm, $size, $file);
       next;
     }
@@ -370,7 +372,7 @@ sub relative_time {
   $unit = "hour";
   $ret = int($ret/60);
 
-  return relative_time_format(fg($c[9]), "<", $unit) 
+  return relative_time_format(fg($c[9]), "<", $unit)
     if $delta < 90 * 60;
   return relative_time_format(fg($c[9]), $ret, $unit)
     if $delta < 24 * 60 * 60;
@@ -383,7 +385,7 @@ sub relative_time {
   $unit = "day ";
   $ret = int($ret/24);
 
-  return relative_time_format(fg($c[4]), "<", $unit) 
+  return relative_time_format(fg($c[4]), "<", $unit)
     if $delta < 48 * 60 * 60;
   return relative_time_format(fg($c[4]), $ret, $unit)
     if $delta < 7 * 24 * 60 * 60;
@@ -482,18 +484,27 @@ sub get_ls_where {
   my @files;
   for(@_) {
     if(-e $_) {
-      push(@files, quotemeta($_));
+      push(@files, $_);
+    }
+    else {
+      push(@ls_opts, $_);
     }
   }
   return (wantarray()) ? @files : scalar(@files);
 }
 
+
 sub get_ls_cmdline {
   my $os = get_os();
-  ( ($os eq 'darwin') or ($os =~ /.+bsd$/) ) and return '-AlvGc';
-  return '-hAlv --group-directories-first --color=always --time=ctime ' .
-         '--time-style=+%s';
+
+  if( ($os eq 'darwin') || ($os =~ m/.*bsd$/) ) {
+    return '-lvGc ' . join('', @ls_opts);
+  }
+
+  return '-hlv --group-directories-first --color=always --time=ctime ' .
+         '--time-style=+%s ' . join('', @ls_opts);
 }
+
 
 sub get_os {
   return $^O;
@@ -511,7 +522,7 @@ ls++ - colorized ls on steroids
 
 =head1 USAGE
 
-ls++ [VIEW] [FILE]
+ls++ [VIEW..] [OPTIONS..] [FILE]
 
 =head1 DESCRIPTION
 
@@ -533,6 +544,9 @@ ls++ is what GNU/BSD ls would look like with extensive makeup applied.
 
   --help  show the help and exit
   --man   show the manpage and exit
+
+Not known parameters will be passed through to B<ls>, so to show hidden files,
+C<-a> or C<-A> might be added. See ls(1) for more information.
 
 =head1 HISTORY
 
@@ -574,6 +588,8 @@ under the same terms as Perl itself
 
 L<ls++.conf(1)>
 
-B<l> <http://github.com/mmso/scripts>
+L<ls(1)>
+
+L<l|http://github.com/mmso/scripts>
 
 =cut

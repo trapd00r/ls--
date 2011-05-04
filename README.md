@@ -22,6 +22,9 @@ ls++ [view] (files)
 
 # OPTIONS
 
+Not known parameters will be passed through to **ls**, so to show hidden files,
+**-a** or **-A** might be added. See **ls(1)** for more information.
+
 ### Views
 
     --pf    permissions, file
@@ -29,8 +32,6 @@ ls++ [view] (files)
     --tpf   time, permissions, file
     --tpsf  time, permissions, size, file (default)
     --ptsf  permissions, time, size, file
-    --help  show the help and exit
-    --man   show the manpage and exit
 
 # INSTALLATION
 
