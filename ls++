@@ -71,6 +71,15 @@ GetOptions(
 
 );
 
+my @ls_opts_cleaned;
+
+foreach my $opt (@ls_opts) {
+        if ($opt !~ /--(pf|psf|ptsf|pfs|fsp|fps|sfp|spf|pstf|sptf|pstf|ptsf)/) {
+                push @ls_opts_cleaned, $opt;
+        }
+}
+@ls_opts = @ls_opts_cleaned;
+
 if( !(exists($ENV{DISPLAY})) and ($ENV{TERM} =~ m/^linux/) ) {
   @d = (' ', ' ', ' ', ' ');
   $ENV{LS_COLORS} = '';
