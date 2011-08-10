@@ -483,6 +483,7 @@ sub isa_tty {
 sub get_ls_where {
   my @files;
   for(@_) {
+    $_ =~ s/\s/\\ /g;
     if(-e $_) {
       push(@files, $_);
     }
