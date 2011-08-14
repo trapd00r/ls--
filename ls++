@@ -427,6 +427,7 @@ sub _get_color_support {
       or($ENV{TERM} eq 'gnome-256color')
       or($ENV{TERM} eq 'konsole-256color')
       or($ENV{TERM} eq 'putty-256color')
+      or($ENV{TERM} eq /rxvt-unicode-256color/)
       or($ENV{TERM} =~ /u?rxvt-256color/)
   ) {
     $colors = 256;
