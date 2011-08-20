@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.340';
+$VERSION = '0.342';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -21,7 +21,7 @@ if(not _init_config()) {;
   die "No configuration file found\n";
 }
 
-our(@c, @d, %ls_colors);
+our(@c, @d, %ls_colors, $symlink_delim, $symlink_color);
 
 my $colors = _get_color_support();
 
@@ -148,7 +148,9 @@ sub ls {
     if(!defined($file)) { # ignored;
       next;
     }
-    $file =~ s/-> (.+)/fg($c[15], '▪▶ ') . fg('italic', fg($c[4], $1))/e;
+    $file =~ s{
+      ->\s(.+)
+    }{ fg($symlink_color, "$symlink_delim ") . fg('italic', fg($c[4], $1)) }ex;
 
     if($^O eq 'linux') {
       $rel = relative_time(time(), $seconds);
