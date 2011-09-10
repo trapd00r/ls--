@@ -4,7 +4,7 @@ ls++ - colorized ls on steroids
 
 # USAGE
 
-ls++ [view] (files)
+ls++ \[OPTION\]... \[FILE\]...
 
 # DESCRIPTION
 
@@ -56,25 +56,40 @@ mtimes.
 
 I really liked that idea, but there were a couple of annoyances, so I forked the
 project and added a configuration file, support for flags that'll control the
-different views and possiblity to ignore certain files.
+different views and possiblity to ignore as well as highlight specific files.
 
 # AUTHOR
 
-Written by Magnus Woldrich
+    \ \ | / /
+     \ \ - /
+      \ | /
+      (O O)
+      ( < )
+      (-=-)
 
-# REPORTING BUGS
+  Magnus Woldrich
+  CPAN ID: WOLDRICH
+  m@japh.se
+  http://japh.se
 
-Report bugs to trapd00r@trapd00r.se
+# CONTRIBUTORS
+
+[Mattias Svanström][0]
+
+[Gregory Sacre][1]
+
 
 # COPYRIGHT
 
-Copyright (C) 2010, 2010 Magnus Woldrich
-
-License: PerlArtistic
-
+Copyright 2010, 2011 the **ls++** AUTHOR and CONTRIBUTORS as listed above.
 
 # SEE ALSO
 
-__l__ <http://github.com/mmso/scripts>
+[l][2]
 
-__pilsner__ <http://github.com/trapd00r/utils/blob/master/pilsner>
+[pilsner][3]
+
+[0]: http://github.com/mmso
+[1]: https://github.com/gsacre
+[2]: http://github.com/mmso/scripts
+[3]: http://github.com/trapd00r/utils/blob/master/pilsner
