@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.342';
+$VERSION = '0.344';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -148,9 +148,15 @@ sub ls {
     if(!defined($file)) { # ignored;
       next;
     }
-    $file =~ s{
-      ->\s(.+)
-    }{ fg($symlink_color, "$symlink_delim ") . fg('italic', fg($c[4], $1)) }ex;
+
+    my $symlink_attr = 'italic';
+    if($ENV{TERM} =~ m/xterm/) {
+      # NOTE xterm does not support italics
+      $symlink_attr = '';
+    }
+    $file =~ s{ ->\s(.+) }{ fg($symlink_color, "$symlink_delim ")
+      . fg($symlink_attr, fg($c[4], $1))
+    }ex;
 
     if($^O eq 'linux') {
       $rel = relative_time(time(), $seconds);
