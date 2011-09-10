@@ -67,10 +67,10 @@ different views and possiblity to ignore as well as highlight specific files.
       ( < )
       (-=-)
 
-  Magnus Woldrich
-  CPAN ID: WOLDRICH
-  m@japh.se
-  http://japh.se
+    Magnus Woldrich
+    CPAN ID: WOLDRICH
+    m@japh.se
+    http://japh.se
 
 # CONTRIBUTORS
 
