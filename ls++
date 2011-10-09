@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.344';
+$VERSION = '0.345';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
