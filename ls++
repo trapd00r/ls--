@@ -7,6 +7,7 @@ use strict;
 use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
+use Time::Local;
 
 my $ls       = '/bin/ls';
 my @ls_opts  = get_ls_cmdline();
@@ -109,14 +110,14 @@ else {
   map { $_ = fg($c[0], $_); } @d;
 }
 
-
 ls();
 
 
 sub ls {
   my $view = shift // 'perm_size_file';
   my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
-
+  my($second, $minute, $hour, $time, $month, $day, $year, %mon2num); #for Mac OS
+  
   open(my $ls, '-|', "$ls @ls_opts @ls_where")
     or die("Cant popen $ls: $!");
 
@@ -133,10 +134,20 @@ sub ls {
       ($file) = $line =~ m/.* \d{6,}? (.+)/;
     }
     elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-      ($perm, $hlink, $user, $group, $size) = split(/\s+/, $line);
+      
+      ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year) = split(/\s+/, $line);
       ($file) = $line =~ m/.*\d{2,}? (.*)/;
-
+      
       $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
+      
+      # Mac OS date conversion
+      ($hour, $minute, $second) = split(/:/, $time);
+      %mon2num = qw(
+        jan 0  feb 1  mar 2  apr 3  may 4  jun 5
+        jul 6  aug 7  sep 8  oct 9  nov 10 dec 11
+      );
+      $month = $mon2num{ lc substr($month, 0, 3) };
+      $seconds = timelocal($second, $minute, $hour, $day, $month, $year);
     }
 
 
@@ -160,8 +171,9 @@ sub ls {
 
     if($^O eq 'linux') {
       $rel = relative_time(time(), $seconds);
-    }
-    else {
+    } elsif ( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
+      $rel = relative_time(time(), $seconds);
+    } else {
       $rel = '';
     }
     $perm = perm($perm);
@@ -174,8 +186,8 @@ sub ls {
 
       # The only thing supported on these platforms for now.
       # Patches very welcome.
-      perm_size_file($perm, $size, $file);
-      next;
+      #perm_time_size_file($perm, $rel, $size, $file);
+      #next;
     }
 
     # OK, probably GNU/Linux
@@ -230,16 +242,30 @@ sub perm_file {
 
 sub perm_time_size_file {
   my ($perm, $rel, $size, $file) = @_;
-  printf("%s %s%s%s%s%s%s%s\n",
-    $d[0],
-    $perm,
-    $d[3],
-    $rel,
-    $d[2],
-    $size,
-    $d[2],
-    $file,
-  );
+  if(get_os() eq 'darwin') {
+    printf("%s%s%s%s%s%6s%s%s\n",
+      $d[0],
+      $perm,
+      $d[3],
+      $rel,
+      $d[2],
+      $size,
+      $d[2],
+      $file,
+    );
+  } else {
+    printf("%s %s%s%s%s%s%s%s\n",
+      $d[0],
+      $perm,
+      $d[3],
+      $rel,
+      $d[2],
+      $size,
+      $d[2],
+      $file,
+    );
+  }
+  
 }
 
 sub perm_size_file {
@@ -256,7 +282,7 @@ sub perm_size_file {
     }
     else {
     }
-    printf("%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+    printf("%s%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
   }
   else {
     printf("%s%s%s%19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
@@ -290,54 +316,31 @@ sub size {
   #FIXME
   if($colors > 16) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
-
-    # MacOS, BSD
-    if(get_os() eq 'darwin') {
-      return sprintf("% 40s", $size)
-        if ($size =~ s/^\s*(.*)(K)$/fg($c[2], $1); fg($c[2], $2)/e);
-        # 23 MacOS
-        # 27 GNU
-      return sprintf("% 23s", $size)
-        if ($size =~ s/^(.*)(M)$/fg($c[7], $1); fg($c[17], $2)/e);
-      return sprintf("% 27s", $size)
-        if ($size =~ s/^(.*)(G)$/fg($c[3], $1); fg($c[17], $2)/e);
-      return sprintf("% 27s", $size) # 1012B
-        if ($size =~ s/^(\d+)$/fg($c[14], $1); fg($c[17], 'B')/e);
+    if($size =~ m/^(\S+)(K)/) {
+      $size = sprintf("% 27s",
+        fg($c[7], sprintf("% 4g", $1))
+          . fg($c[2], fg('bold', $2))
+        );
     }
-    # GNU
-    else {
-      if($size =~ m/^(\S+)(K)/) {
-        $size = sprintf("% 27s",
-          fg($c[7], sprintf("% 4g", $1))
-            . fg($c[2], fg('bold', $2))
-          );
-      }
-      elsif($size =~ m/^(\S+)(M)/) {
-        $size = sprintf("% 29s",
-          fg($c[7], sprintf("% 4g", $1))
-            . fg($c[4], fg('bold', $2))
-          );
-      }
-      elsif($size =~ m/^(\S+)(G)/) {
-        $size = sprintf("% 27s",
-          fg($c[7], sprintf("% 4g", $1))
-            . fg($c[3], fg('bold', $2))
-          );
-      }
-      elsif($size =~ m/^(\d+)/) {
-        $size = sprintf("% 27s",
-          fg($c[7], sprintf("%4d", $1))
-            . fg($c[14], fg('bold', 'B'))
-          );
-      }
-      # return sprintf("% 27s", $size)
-      #   if ($size =~ s/^(.*)(M)$/fg($c[7], $1);fg($c[17], $2)/e);
-      # return sprintf("% 29s", $size)
-      #   if ($size =~ s/^(.*)(G)$/fg($c[3], $1);fg($c[17], $2)/e);
-      # return sprintf("% 27s", $size) # 1012B
-      #   if ($size =~ s/^(\d+)$/fg($c[14], $1);fg($c[17], 'B')/e);
+    elsif($size =~ m/^(\S+)(M)/) {
+      $size = sprintf("% 29s",
+        fg($c[7], sprintf("% 4g", $1))
+          . fg($c[4], fg('bold', $2))
+        );
+    }
+    elsif($size =~ m/^(\S+)(G)/) {
+      $size = sprintf("% 27s",
+        fg($c[7], sprintf("% 4g", $1))
+          . fg($c[3], fg('bold', $2))
+        );
+    }
+    elsif($size =~ m/^(\d+)/) {
+      $size = sprintf("% 27s",
+        fg($c[7], sprintf("%4d", $1))
+          . fg($c[14], fg('bold', 'B'))
+        );
+    }
       return $size;
-    }
   }
 
   # ANSI
@@ -366,7 +369,7 @@ sub relative_time {
   my ($cur, $sec) = @_;
   my $delta = $cur - $sec;
   my ($unit, $ret);
-
+  
   ## 0 < sec < 60
   $unit = "sec ";
   $ret = $delta;
@@ -438,6 +441,7 @@ sub _get_color_support {
   }
   if(
     $ENV{TERM} eq 'xterm'
+      or($ENV{TERM} eq 'xterm-256color') # What Mac OS Lion terminal pretends to be
       or($ENV{TERM} eq 'rxvt-256-color')
       or($ENV{TERM} =~ /screen-256/)
       or($ENV{TERM} eq 'Eterm-256color')
@@ -517,7 +521,7 @@ sub get_ls_cmdline {
   my $os = get_os();
 
   if( ($os eq 'darwin') || ($os =~ m/.*bsd$/) ) {
-    return '-lvGc ' . join('', @ls_opts);
+    return '-lvGcTh ' . join('', @ls_opts);
   }
 
   return '-hlv --group-directories-first --color=always --time=ctime ' .
