@@ -179,7 +179,7 @@ sub ls {
     $perm = perm($perm);
 
     if( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-      #$size = size($size);
+      $size = size($size);
       $size =~ s/\s{6}//;
 
       $size = "\0" x 40 . "    " if !$size;
@@ -316,54 +316,31 @@ sub size {
   #FIXME
   if($colors > 16) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
-
-    # MacOS, BSD
-    if(get_os() eq 'darwin') {
-      return sprintf("% 40s", $size)
-        if ($size =~ s/^\s*(.*)(K)$/fg($c[2], $1); fg($c[2], $2)/e);
-        # 23 MacOS
-        # 27 GNU
-      return sprintf("% 23s", $size)
-        if ($size =~ s/^(.*)(M)$/fg($c[7], $1); fg($c[17], $2)/e);
-      return sprintf("% 27s", $size)
-        if ($size =~ s/^(.*)(G)$/fg($c[3], $1); fg($c[17], $2)/e);
-      return sprintf("% 27s", $size) # 1012B
-        if ($size =~ s/^(\d+)$/fg($c[14], $1); fg($c[17], 'B')/e);
+    if($size =~ m/^(\S+)(K)/) {
+      $size = sprintf("% 27s",
+        fg($c[7], sprintf("% 4g", $1))
+          . fg($c[2], fg('bold', $2))
+        );
     }
-    # GNU
-    else {
-      if($size =~ m/^(\S+)(K)/) {
-        $size = sprintf("% 27s",
-          fg($c[7], sprintf("% 4g", $1))
-            . fg($c[2], fg('bold', $2))
-          );
-      }
-      elsif($size =~ m/^(\S+)(M)/) {
-        $size = sprintf("% 29s",
-          fg($c[7], sprintf("% 4g", $1))
-            . fg($c[4], fg('bold', $2))
-          );
-      }
-      elsif($size =~ m/^(\S+)(G)/) {
-        $size = sprintf("% 27s",
-          fg($c[7], sprintf("% 4g", $1))
-            . fg($c[3], fg('bold', $2))
-          );
-      }
-      elsif($size =~ m/^(\d+)/) {
-        $size = sprintf("% 27s",
-          fg($c[7], sprintf("%4d", $1))
-            . fg($c[14], fg('bold', 'B'))
-          );
-      }
-      # return sprintf("% 27s", $size)
-      #   if ($size =~ s/^(.*)(M)$/fg($c[7], $1);fg($c[17], $2)/e);
-      # return sprintf("% 29s", $size)
-      #   if ($size =~ s/^(.*)(G)$/fg($c[3], $1);fg($c[17], $2)/e);
-      # return sprintf("% 27s", $size) # 1012B
-      #   if ($size =~ s/^(\d+)$/fg($c[14], $1);fg($c[17], 'B')/e);
+    elsif($size =~ m/^(\S+)(M)/) {
+      $size = sprintf("% 29s",
+        fg($c[7], sprintf("% 4g", $1))
+          . fg($c[4], fg('bold', $2))
+        );
+    }
+    elsif($size =~ m/^(\S+)(G)/) {
+      $size = sprintf("% 27s",
+        fg($c[7], sprintf("% 4g", $1))
+          . fg($c[3], fg('bold', $2))
+        );
+    }
+    elsif($size =~ m/^(\d+)/) {
+      $size = sprintf("% 27s",
+        fg($c[7], sprintf("%4d", $1))
+          . fg($c[14], fg('bold', 'B'))
+        );
+    }
       return $size;
-    }
   }
 
   # ANSI
