@@ -134,20 +134,24 @@ sub ls {
       ($file) = $line =~ m/.* \d{6,}? (.+)/;
     }
     elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-      
-      ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year) = split(/\s+/, $line);
-      ($file) = $line =~ m/.*\d{2,}? (.*)/;
-      
-      $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
-      
-      # Mac OS date conversion
-      ($hour, $minute, $second) = split(/:/, $time);
-      %mon2num = qw(
-        jan 0  feb 1  mar 2  apr 3  may 4  jun 5
-        jul 6  aug 7  sep 8  oct 9  nov 10 dec 11
-      );
-      $month = $mon2num{ lc substr($month, 0, 3) };
-      $seconds = timelocal($second, $minute, $hour, $day, $month, $year);
+        ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year) = split(/\s+/, $line);
+        if( (!$day) ) {
+          printf("%s", $line);
+          next;
+        }
+        ($file) = $line =~ m/.*\d{2,}? (.*)/;
+
+        $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
+
+        # Mac OS date conversion
+        ($hour, $minute, $second) = split(/:/, $time);
+        %mon2num = qw(
+          jan 0  feb 1  mar 2  apr 3  may 4  jun 5
+          jul 6  aug 7  sep 8  oct 9  nov 10 dec 11
+        );
+        $month = $mon2num{ lc substr($month, 0, 3) };
+        $seconds = timelocal($second, $minute, $hour, $day, $month, $year);
+
     }
 
 
