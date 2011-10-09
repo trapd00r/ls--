@@ -14,7 +14,7 @@ ls++ \[OPTION\]... \[FILE\]...
 
 ### MacOSX / *BSD
 
-  ![Mac OS X screenshot](http://f.cl.ly/items/2X2v2z1P0X1H471i021R/Screen%20Shot%202011-10-08%20at%209.09.33%20PM.png)
+  ![Mac OS X screenshot](http://devel.japh.se/App-ls%2b%2b/ls%2b%2b_macosx.png)
 
 ### GNU/Linux TTY/VC
 
@@ -90,6 +90,8 @@ different views and possibility to ignore as well as highlight specific files.
 
 [Gregory Sacre][1]
 
+[Shelby Munsch][2] - extensive macos work
+
 
 # COPYRIGHT
 
@@ -99,9 +101,10 @@ Copyright 2010, 2011 the **ls++** AUTHOR and CONTRIBUTORS as listed above.
 
 [l][2]
 
-[pilsner][3]
+[pilsner][4]
 
 [0]: http://github.com/mmso
 [1]: https://github.com/gsacre
-[2]: http://github.com/mmso/scripts
-[3]: http://github.com/trapd00r/utils/blob/master/pilsner
+[2]: https://github.com/blacRose
+[3]: http://github.com/mmso/scripts
+[4]: http://github.com/trapd00r/utils/blob/master/pilsner
