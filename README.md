@@ -10,11 +10,11 @@ ls++ \[OPTION\]... \[FILE\]...
 
 ### GNU/Linux
 
-  ![GNU/Linux screenshot](http://devel.japh.se/App::ls++/ls++_xterm.png)
+  ![GNU/Linux screenshot](http://devel.japh.se/App-ls%2b%2b/ls%2b%2b_xterm.png)
 
 ### MacOSX / *BSD
 
-  Please provide a screenshot, Mac users.
+  ![Mac OS X screenshot](http://f.cl.ly/items/2X2v2z1P0X1H471i021R/Screen%20Shot%202011-10-08%20at%209.09.33%20PM.png)
 
 ### GNU/Linux TTY/VC
 
@@ -35,11 +35,23 @@ Not known parameters will be passed through to **ls**, so to show hidden files,
 
 # INSTALLATION
 
+### GNU/Linux Installation
+
     cpan Term::ExtendedColor
     git clone git://github.com/trapd00r/ls--.git
     cd ls--
     perl Makefile.PL
     make && su -c 'make install'
+
+    cp ls++.conf $HOME/.ls++.conf
+
+### Mac OS X Installation
+
+    cpan Term::ExtendedColor
+    git clone git://github.com/trapd00r/ls--.git
+    cd ls--
+    perl Makefile.PL
+    make && sudo 'make install'
 
     cp ls++.conf $HOME/.ls++.conf
 
@@ -50,13 +62,13 @@ option to GNU find. Sadly, there are no -printf option available for ls, so I
 threw together a quick hack called 'pilsner' that did what I wanted and nothing
 more, nothing less. Not very useful to others.
 
-Mattias Svanström crafted together the 'l' application which did basicly the
+Mattias Svanström crafted together the 'l' application which did basically the
 same thing but more elegant and with a nice twist; it calculated relative
 mtimes.
 
 I really liked that idea, but there were a couple of annoyances, so I forked the
 project and added a configuration file, support for flags that'll control the
-different views and possiblity to ignore as well as highlight specific files.
+different views and possibility to ignore as well as highlight specific files.
 
 # AUTHOR
 
