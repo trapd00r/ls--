@@ -29,10 +29,11 @@ my $colors = _get_color_support();
 $ENV{DEBUG} and print "$_ x\n" for @c;
 
 my $opt = {
-  perm_file           => undef,
-  perm_time_file      => undef,
-  perm_size_file      => undef,
-  perm_time_size_file => undef,
+  perm_file                 => undef,
+  perm_time_file            => undef,
+  perm_size_file            => undef,
+  perm_time_size_file       => undef,
+  perm_owner_time_size_file => undef,
 };
 
 Getopt::Long::Configure(
@@ -46,6 +47,7 @@ GetOptions(
   'pf'        => \$opt->{perm_file},
   'psf'       => \$opt->{perm_size_file},
   'ptsf'      => \$opt->{perm_time_size_file},
+  'potsf'     => \$opt->{perm_owner_time_size_file},
 
   'ansi'      => sub {
     $colors = 16;
@@ -75,7 +77,7 @@ GetOptions(
 my @ls_opts_cleaned;
 
 foreach my $opt (@ls_opts) {
-        if ($opt !~ /--(pf|psf|ptsf|pfs|fsp|fps|sfp|spf|pstf|sptf|pstf|ptsf)/) {
+        if ($opt !~ /--(pf|psf|ptsf|pfs|fsp|fps|sfp|spf|pstf|sptf|pstf|ptsf|potsf)/) {
                 push @ls_opts_cleaned, $opt;
         }
 }
@@ -200,6 +202,8 @@ sub ls {
       $size =~ s/^\s{3}(.+)/$1 /;
     }
 
+	 my $user = owner($user, $group);
+
 
 
     if($opt->{perm_file}) {
@@ -214,7 +218,11 @@ sub ls {
       perm_size_file($perm, $size, $file);
       next;
     }
-    else {
+    elsif($opt->{perm_owner_time_size_file}) {
+      perm_owner_time_size_file($perm, $user, $rel, $size, $file);
+      next;
+    }
+	 else {
       perm_time_size_file($perm, $rel, $size, $file);
       next;
     }
@@ -272,6 +280,38 @@ sub perm_time_size_file {
   
 }
 
+sub perm_owner_time_size_file {
+  my ($perm, $user, $rel, $size, $file) = @_;
+  if(get_os() eq 'darwin') {
+    printf("%s%s%s%s%s%s%6s%s%s\n",
+      $d[0],
+      $perm,
+      $d[3],
+      $user,
+      $d[2],
+      $rel,
+      $d[2],
+      $size,
+      $d[2],
+      $file,
+    );
+  } else {
+    printf("%s %s%s%s%s%s%s%s%s%s\n",
+      $d[0],
+      $perm,
+      $d[3],
+      $user,
+      $d[2],
+      $rel,
+      $d[2],
+      $size,
+      $d[2],
+      $file,
+    );
+  }
+  
+}
+
 sub perm_size_file {
   my ($perm, $size, $file) = @_;
   if(get_os() eq 'darwin') {
@@ -312,6 +352,14 @@ sub perm {
   $perm =~ s/(T)/fg($c[8],  fg('bold', $1))/eg;
 
   return $perm;
+}
+
+sub owner {
+  my ($user, $group) = @_;
+
+  $user = fg($c[7], $user);
+  $group = fg($c[8], $group);
+  return $user . "/". $group;
 }
 
 sub size {
@@ -562,6 +610,7 @@ ls++ is what GNU/BSD ls would look like with extensive makeup applied.
   -pf    permissions, file
   -psf   permissions, size, file
   -ptsf  permissions, time, size, file
+  -potsf permissions, owner, time, size, file
 
 =head3 COLORS
 
