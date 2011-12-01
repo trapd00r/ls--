@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.346';
+$VERSION = '0.348';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -555,9 +555,8 @@ sub isa_tty {
 sub get_ls_where {
   my @files;
   for(@_) {
-    $_ =~ s/\s/\\ /g;
     if(-e $_) {
-      push(@files, $_);
+      push(@files, escape($_));
     }
     else {
       push(@ls_opts, $_);
@@ -578,6 +577,11 @@ sub get_ls_cmdline {
          '--time-style=+%s ' . join('', @ls_opts);
 }
 
+sub escape {
+  my $p = shift;
+  $p =~ s/([;<>*|`&\$!#()[\]{}:'" ])/\\$1/g;
+  return $p;
+}
 
 sub get_os {
   return $^O;
