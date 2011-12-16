@@ -485,7 +485,7 @@ sub relative_time {
 
 sub _get_color_support {
   my $colors = 8;
-  if(!($ENV{DISPLAY})) {
+  if(!($ENV{DISPLAY}) and !($ENV{SSH_CLIENT})) {
     $colors = 16;
     return $colors;
   }
