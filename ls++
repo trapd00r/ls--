@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.348';
+$VERSION = '0.350-dev';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -48,25 +48,6 @@ GetOptions(
   'psf'       => \$opt->{perm_size_file},
   'ptsf'      => \$opt->{perm_time_size_file},
   'potsf'     => \$opt->{perm_owner_time_size_file},
-
-  'ansi'      => sub {
-    $colors = 16;
-    @c = (
-      '30', '30;1',
-      '31', '31;1',
-      '32', '32;1',
-      '33', '33;1',
-      '34', '34;1',
-      '35', '35;1',
-      '36', '36;1',
-      '37',
-
-      '33;1',
-      '0',
-      '1',
-    );
-    map { $_ = "\e[$_" . 'm' } @c;
-  },
 
   'm|man'     => sub { pod2usage(verbose => 3); },
   'h|help'    => sub { pod2usage(verbose => 1); },
@@ -391,18 +372,6 @@ sub size {
         );
     }
       return $size;
-  }
-
-  # ANSI
-  else {
-    return sprintf("% 26s", $size)
-      if ($size =~ s/(.*)(K)/$c[2]$1$c[2]$c[17]$2$c[16]/);
-    return sprintf("% 23s", $size)
-      if ($size =~ s/(.*)(M)/$c[7]$1$c[17]$2$c[16]/);
-    return sprintf("% 23s", $size)
-      if ($size =~ s/(.*)(G)/$c[3]$1$c[17]$2$c[16]/);
-    return sprintf("% 21s", $size) # 1012B
-      if ($size =~ s/(\d+)/$c[14]$1$c[17]B$c[16]/);
   }
 }
 
