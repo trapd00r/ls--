@@ -1,13 +1,25 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.350-dev';
+$VERSION = '0.400-dev';
 
-use strict;
+#use strict;
+#use warnings; #XXX unicode bug
+#use utf8;
+#use encoding 'utf8';
+#use open qw(:std :utf8);
 use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
 use Time::Local;
+
+#use Devel::Comments;
+
+our($opt);
+
+if(not _init_config()) {;
+  die "No configuration file found\n";
+}
 
 my $ls       = '/bin/ls';
 my @ls_opts  = get_ls_cmdline();
@@ -18,23 +30,6 @@ if(not isa_tty()) {
   exit;
 }
 
-if(not _init_config()) {;
-  die "No configuration file found\n";
-}
-
-our(@c, @d, %ls_colors, $symlink_delim, $symlink_color);
-
-my $colors = _get_color_support();
-
-$ENV{DEBUG} and print "$_ x\n" for @c;
-
-my $opt = {
-  perm_file                 => undef,
-  perm_time_file            => undef,
-  perm_size_file            => undef,
-  perm_time_size_file       => undef,
-  perm_owner_time_size_file => undef,
-};
 
 Getopt::Long::Configure(
   qw(
@@ -44,10 +39,10 @@ Getopt::Long::Configure(
 );
 
 GetOptions(
-  'pf'        => \$opt->{perm_file},
-  'psf'       => \$opt->{perm_size_file},
-  'ptsf'      => \$opt->{perm_time_size_file},
-  'potsf'     => \$opt->{perm_owner_time_size_file},
+  'pf'        => \$opt->{view_perm_file},
+  'psf'       => \$opt->{view_perm_size_file},
+  'ptsf'      => \$opt->{view_perm_time_size_file},
+  'potsf'     => \$opt->{view_perm_owner_time_size_file},
 
   'm|man'     => sub { pod2usage(verbose => 3); },
   'h|help'    => sub { pod2usage(verbose => 1); },
@@ -64,40 +59,10 @@ for my $opt(@ls_opts) {
 }
 @ls_opts = @ls_opts_cleaned;
 
-if( !(exists($ENV{DISPLAY})) and ($ENV{TERM} =~ m/^linux/) ) {
-  @d = (' ', ' ', ' ', ' ');
-  $ENV{LS_COLORS} = '';
-  $colors = 16;
-  @c = (
-    '30', '30;1',
-    '31', '31;1',
-    '32', '32;1',
-    '33', '33;1',
-    '34', '34;1',
-    '35', '35;1',
-    '36', '36;1',
-    '37',
-
-    '33;1',
-    '0',
-    '1',
-  );
-  map { $_ = "\e[$_" . 'm' } @c;
-}
-
-
-if($colors > 88) {
-  map { $_ = fg('gray20', $_); } @d;
-}
-else {
-  map { $_ = fg($c[0], $_); } @d;
-}
-
 ls();
 
-
 sub ls {
-  my $view = shift // 'perm_size_file';
+  my $view = shift // 'view_perm_size_file';
   my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
   my($second, $minute, $hour, $time, $month, $day, $year, %mon2num); #for Mac OS
 
@@ -110,99 +75,59 @@ sub ls {
 
 
     # Assume GNU coreutils
-    if($^O eq 'linux') {
-      ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/, $line)
-        unless $line =~ /^\s/;
+    ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/, $line)
+      unless $line =~ /^\s/;
 
-      ($file) = $line =~ m/.* \d{6,}? (.+)/;
-    }
-    elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-        ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year) = split(/\s+/, $line);
-        if( (!$day) ) {
-          printf("%s", $line);
-          next;
-        }
-        ($file) = $line =~ m/.*\d{2,}? (.*)/;
+    ($file) = $line =~ m/[0-9]{10} (.+)$/;
 
-        $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
 
-        # Mac OS date conversion
-        ($hour, $minute, $second) = split(/:/, $time);
-        %mon2num = qw(
-          jan 0  feb 1  mar 2  apr 3  may 4  jun 5
-          jul 6  aug 7  sep 8  oct 9  nov 10 dec 11
-        );
-        $month = $mon2num{ lc substr($month, 0, 3) };
-        $seconds = timelocal($second, $minute, $hour, $day, $month, $year);
-
+    #if( (!$file) ) {
+    #  next;
+    #}
+    if( ($ENV{DISPLAY}) || ($ENV{SSH_CLIENT}) ) {
+      $file = add_ls_color($file);
     }
 
-
-    if( (!$file) ) {
-      next;
-    }
-    $file = add_ls_color($file) unless(!$ENV{DISPLAY});
-
-    if(!defined($file)) { # ignored;
-      next;
-    }
+    # XXX
+    #if(!defined($file)) { # ignored;
+    #  next;
+    #}
 
     my $symlink_attr = 'italic';
     if($ENV{TERM} =~ m/xterm/) {
       # NOTE xterm does not support italics
       $symlink_attr = '';
     }
-    $file =~ s{ ->\s(.+) }{ fg($symlink_color, "$symlink_delim ")
-      . fg($symlink_attr, fg($c[4], $1))
+    $file =~ s{ ->\s(.+) }{ fg($opt->{symlink_color}, $opt->{symlink_arrow})
+      . fg($symlink_attr, fg($opt->{symlink_color}, $1))
     }ex;
 
-    if($^O eq 'linux') {
-      $rel = relative_time(time(), $seconds);
-    } elsif ( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-      $rel = relative_time(time(), $seconds);
-    } else {
-      $rel = '';
-    }
+    $rel  = relative_time(time(), $seconds);
     $perm = perm($perm);
+    $size = size($size);
 
-    if( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-      $size = size($size);
-      $size =~ s/\s{6}//;
-
-      $size = "\0" x 40 . "    " if !$size;
-
-      # The only thing supported on these platforms for now.
-      # Patches very welcome.
-      #perm_time_size_file($perm, $rel, $size, $file);
-      #next;
-    }
-
-    # OK, probably GNU/Linux
-    else {
-      $size = size($size);
-      $size =~ s/^\s{3}(.+)/$1 /;
-    }
+    $size =~ s/^\s{3}(.+)/$1 /;
 
     my $user = owner($user, $group);
 
-    if($opt->{perm_file}) {
-      perm_file($perm, $file);
+    if($opt->{view_perm_file}) {
+      view_perm_file($perm, $file);
       next;
     }
     elsif($opt->{perm_time_file}) {
       perm_time_file($perm, $rel, $file);
       next;
     }
-    elsif($opt->{perm_size_file}) {
-      perm_size_file($perm, $size, $file);
+    elsif($opt->{view_perm_size_file}) {
+      view_perm_size_file($perm, $size, $file);
       next;
     }
-    elsif($opt->{perm_owner_time_size_file}) {
-      perm_owner_time_size_file($perm, $user, $rel, $size, $file);
+    elsif($opt->{view_perm_owner_time_size_file}) {
+      view_perm_owner_time_size_file($perm, $user, $rel, $size, $file);
       next;
     }
     else {
-      perm_time_size_file($perm, $rel, $size, $file);
+      view_perm_time_size_file($perm, $rel, $size, $file);
       next;
     }
   }
@@ -211,175 +136,152 @@ sub ls {
 sub add_ls_color {
   my $file = shift;
 
-  for my $pattern(keys(%ls_colors)) {
+  for my $pattern(keys(%{$opt->{ls_color}})) {
+    if($opt->{ls_color}->{$pattern} eq 'IGNORE') {
+      next;
+    }
     my $no_ls_color_file = uncolor($file);
 
     if($no_ls_color_file =~ /$pattern/) {
-      if($ls_colors{$pattern} eq 'IGNORE') {
-        return undef;
-      }
       $file = $no_ls_color_file;
-      $file = fg($ls_colors{$pattern}, $file);
+      $file = fg($opt->{ls_color}->{$pattern}, $file);
     }
   }
   return $file;
 }
 
-sub perm_file {
+sub view_perm_file {
   my ($perm, $file) = @_;
-  printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
+  printf("%s%s%s%s%s%s%s%s%s%s\n",
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $perm,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $file,
+  );
 }
 
 
-sub perm_time_size_file {
+sub view_perm_time_size_file {
   my ($perm, $rel, $size, $file) = @_;
-  if(get_os() eq 'darwin') {
-    printf("%s%s%s%s%s%6s%s%s\n",
-      $d[0],
-      $perm,
-      $d[3],
-      $rel,
-      $d[2],
-      $size,
-      $d[2],
-      $file,
-    );
-  } else {
-    printf("%s %s%s%s%s%s%s%s\n",
-      $d[0],
-      $perm,
-      $d[3],
-      $rel,
-      $d[2],
-      $size,
-      $d[2],
-      $file,
-    );
-  }
-
+  printf("%s%s%s%s%s%s%s%s\n",
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $perm,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $rel,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $size,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $file,
+  );
 }
 
-sub perm_owner_time_size_file {
+sub view_perm_owner_time_size_file {
   my ($perm, $user, $rel, $size, $file) = @_;
-  if(get_os() eq 'darwin') {
-    printf("%s%s%s%s%s%s%6s%s%s\n",
-      $d[0],
-      $perm,
-      $d[3],
-      $user,
-      $d[2],
-      $rel,
-      $d[2],
-      $size,
-      $d[2],
-      $file,
-    );
-  } 
-  else {
-    printf("%s %s%s%s%s%s%s%s%s%s\n",
-      $d[0],
-      $perm,
-      $d[3],
-      $user,
-      $d[2],
-      $rel,
-      $d[2],
-      $size,
-      $d[2],
-      $file,
-    );
-  }
+  printf("%s%s%s%s%s%s%s%s%s%s\n",
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $perm,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $user,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $rel,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $size,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $file,
+  );
 }
 
-sub perm_size_file {
-  my ($perm, $size, $file) = @_;
-  if(get_os() eq 'darwin') {
-    if(length($size) == 38) {
-      #$size = " $size ";
-    }
-    elsif(length($size) == 37) {
-      $size .= ' ';
-    }
+sub view_perm_size_file {
+  my($perm, $size, $file) = @_;
+  if(length($size) == 37) {
+    $size .= '';
+  }
     elsif(length($size) == 24) {
       $size = "            $size            ";
     }
-    else {
-    }
-    printf("%s%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
-  }
-  else {
-    printf("%s%s%s%19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
-  }
+  printf("%s%s%s%s%s%s%s%s\n",
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $perm,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $size,
+    fg($opt->{color}->{separator}, $opt->{separator}),
+    $file,
+  );
 }
-
-
-
 
 sub perm {
   my ($perm) = @_;
 
-  $perm =~ s/-/$d[1]/g;
-  $perm =~ s/(r)/fg($c[2], $1)/eg;
-  $perm =~ s/(w)/fg($c[7], $1)/eg;
-  $perm =~ s/(x)/fg($c[1], $1)/eg;
+  $perm =~ s/-/$opt->{delimiter}/g;
+  $perm =~ s/(r)/fg($opt->{color}->{perm_read},    $1)/eg;
+  $perm =~ s/(w)/fg($opt->{color}->{perm_write},   $1)/eg;
+  $perm =~ s/(x)/fg($opt->{color}->{perm_execute}, $1)/eg;
 
-  $perm =~ s/(d)/fg($c[2],  fg('bold', $1))/eg;
-  $perm =~ s/(l)/fg($c[8],  fg('bold', $1))/eg;
-  $perm =~ s/(s)/fg($c[11], $1)/eg;
-  $perm =~ s/(S)/fg($c[8],  $1)/eg;
-  $perm =~ s/(t)/fg($c[8],  $1)/eg;
-  $perm =~ s/(T)/fg($c[8],  fg('bold', $1))/eg;
+  $perm =~ s/(d)/fg($opt->{color}->{perm_dir},  fg('bold', $1))/eg;
+  $perm =~ s/(l)/fg($opt->{color}->{perm_link}, fg('bold', $1))/eg;
+  $perm =~ s/(s)/fg($opt->{color}->{perm_suid}, fg('bold',  $1))/eg;
+  $perm =~ s/(S)/fg($opt->{color}->{perm_guid}, fg('bold', $1))/eg;
+  $perm =~ s/(t)/fg($opt->{color}->{perm_sticky}, $1)/eg;
+  $perm =~ s/(T)/fg($opt->{color}->{perm_stickybig}, fg('bold', $1))/eg;
 
   return $perm;
 }
 
 sub owner {
   my ($user, $group) = @_;
+  $user  = fg($opt->{color}->{user},  $user);
+  $group = fg($opt->{color}->{group}, $group);
 
-  $user  = fg($c[7], $user);
-  $group = fg($c[8], $group);
-  return $user . ":". $group;
+  return $user . ':'. $group;
 }
 
 sub size {
   my ($size) = @_;
 
+  #warn "SIZE len is " . length($size), "\n";
+
   #FIXME
-  if($colors > 16) {
-    #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
-    if($size =~ m/^(\S+)(K)/) {
-      $size = sprintf("% 27s",
-        fg($c[7], sprintf("% 4g", $1))
-          . fg($c[2], fg('bold', $2))
-        );
-    }
-    elsif($size =~ m/^(\S+)(M)/) {
-      $size = sprintf("% 29s",
-        fg($c[7], sprintf("% 4g", $1))
-          . fg($c[4], fg('bold', $2))
-        );
-    }
-    elsif($size =~ m/^(\S+)(G)/) {
-      $size = sprintf("% 27s",
-        fg($c[7], sprintf("% 4g", $1))
-          . fg($c[3], fg('bold', $2))
-        );
-    }
-    elsif($size =~ m/^(\d+)/) {
-      $size = sprintf("% 27s",
-        fg($c[7], sprintf("%4d", $1))
-          . fg($c[14], fg('bold', 'B'))
-        );
-    }
-      return $size;
+  if($size =~ m/^(\S+)(K)/) {
+    $size = sprintf("% 27s",
+      fg($opt->{color}->{kilobyte}, sprintf("% 4g", $1))
+      . fg($opt->{color}->{kilobyte}, fg('bold', $2))
+    );
   }
+  elsif($size =~ m/^(\S+)(M)/) {
+    $size = sprintf("% 29s",
+      fg($opt->{color}->{megabyte}, sprintf("% 4g", $1))
+      . fg($opt->{color}->{megabyte}, fg('bold', $2))
+    );
+  }
+  elsif($size =~ m/^(\S+)(G)/) {
+    $size = sprintf("% 27s",
+      fg($opt->{color}->{gigabyte}, sprintf("% 4g", $1))
+      . fg($opt->{color}->{gigabyte}, fg('bold', $2))
+    );
+  }
+  elsif($size =~ m/^(\d+)/) {
+    if($1 == 0) {
+      $size = sprintf("% 29s",
+      fg($opt->{color}->{empty}, fg('bold', sprintf("% 4s", '-')))
+      . fg($opt->{color}->{byte}, fg('bold', 'B'))
+    );
+    }
+    else {
+      $size = sprintf("% 29s",
+        fg($opt->{color}->{byte}, sprintf("%4d", $1))
+        . fg($opt->{color}->{byte}, fg('bold', 'B'))
+      );
+    }
+  }
+  return $size;
 }
 
 
 
 sub relative_time_format {
   my ($color, $string, $unit) = @_;
-  return sprintf("%s%-3s%-3s", $color, $string, $unit);
+  # XXX
+  return sprintf("%s%-3s%-2s", $color, $string, $unit);
 }
 
 
@@ -393,97 +295,98 @@ sub relative_time {
   $unit = "sec ";
   $ret = $delta;
 
-  return relative_time_format(fg($c[3]), "<", $unit)
+  return relative_time_format(fg($opt->{color}->{sec}), "<", $unit)
     if $delta < 10;
-  return relative_time_format(fg($c[3]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{sec}), $ret, $unit)
     if $delta < 60;
 
   ## 1 < min < 45
   $unit = "min ";
   $ret = int($ret/60);
 
-  return relative_time_format(fg($c[15]), "<", $unit)
+  # XXX
+  return relative_time_format(fg($opt->{color}->{min}), "<", $unit)
     if $delta < 2 * 60;
-  return relative_time_format(fg($c[15]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{min}), $ret, $unit)
     if $delta < 45 * 60;
 
   ## 0.75 < hour < 42
   $unit = "hour";
   $ret = int($ret/60);
 
-  return relative_time_format(fg($c[9]), "<", $unit)
+  return relative_time_format(fg($opt->{color}->{hour}), "<", $unit)
     if $delta < 90 * 60;
-  return relative_time_format(fg($c[9]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{hour}), $ret, $unit)
     if $delta < 24 * 60 * 60;
-  return relative_time_format(fg($c[9]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{hour}), $ret, $unit)
     if $delta < 30 * 60 * 60;
-  return relative_time_format(fg($c[9]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{hour}), $ret, $unit)
     if $delta < 36 * 60 * 60;
 
   ## 0.75 < day < 30
   $unit = "day ";
   $ret = int($ret/24);
 
-  return relative_time_format(fg($c[4]), "<", $unit)
+  return relative_time_format(fg($opt->{color}->{day}), "<", $unit)
     if $delta < 48 * 60 * 60;
-  return relative_time_format(fg($c[4]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{day}), $ret, $unit)
     if $delta < 7 * 24 * 60 * 60;
-  return relative_time_format(fg($c[4]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{day}), $ret, $unit)
     if $delta < 14 * 24 * 60 * 60;
-  return relative_time_format(fg($c[4]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{day}), $ret, $unit)
     if $delta < 28 * 24 * 60 * 60;
-  return relative_time_format(fg($c[4]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{day}), $ret, $unit)
     if $delta < 30 * 24 * 60 * 60;
 
   ## 1 < month < 12
   $unit = "mon ";
   $ret = int($ret/30);
 
-  return relative_time_format(fg($c[14]), "<", $unit)
+  return relative_time_format(fg($opt->{color}->{month}), "<", $unit)
     if $delta < 2 * 30 * 24 * 60 * 60;
-  return relative_time_format(fg($c[14]), $ret, $unit)
+  return relative_time_format(fg($opt->{color}->{month}), $ret, $unit)
     if $delta < 12 * 30 * 24 * 60 * 60;
 
   ## 1 < years < inf
   $unit = "year";
   $ret = int($ret/12);
 
-  return relative_time_format(fg($c[0]), $ret, $unit);
+  return relative_time_format(fg($opt->{color}->{year}), $ret, $unit);
 }
 
 
-sub _get_color_support {
-  my $colors = 8;
-  if(!($ENV{DISPLAY})) {
-    $colors = 16;
-    return $colors;
-  }
-  if(
-    $ENV{TERM} eq 'xterm'
-      or($ENV{TERM} eq 'xterm-256color') # What Mac OS Lion terminal pretends to be
-      or($ENV{TERM} eq 'rxvt-256-color')
-      or($ENV{TERM} =~ /screen-256/)
-      or($ENV{TERM} eq 'Eterm-256color')
-      or($ENV{TERM} eq 'gnome-256color')
-      or($ENV{TERM} eq 'konsole-256color')
-      or($ENV{TERM} eq 'putty-256color')
-      or($ENV{TERM} eq /rxvt-unicode-256color/)
-      or($ENV{TERM} =~ /u?rxvt-256color/)
-  ) {
-    $colors = 256;
-  }
-  elsif($ENV{TERM} eq 'rxvt-unicode') {
-    $colors = 88;
-  }
-  elsif($ENV{TERM} eq 'screen') {
-    $colors = 8;
-  }
-  else {
-    chomp($colors = `tput colors`); # fail silently
-  }
-
-  return $colors;
-}
+#sub _get_color_support {
+#  my $colors = 8;
+#  if(!($ENV{DISPLAY})) {
+#    $colors = 16;
+#    return $colors;
+#  }
+#  if(
+#    $ENV{TERM} eq 'xterm'
+#      or($ENV{TERM} eq 'xterm-256color') # What Mac OS Lion terminal pretends to be
+#      or($ENV{TERM} eq 'rxvt-256-color')
+#      or($ENV{TERM} =~ /screen-256/)
+#      or($ENV{TERM} eq 'Eterm-256color')
+#      or($ENV{TERM} eq 'gnome-256color')
+#      or($ENV{TERM} eq 'konsole-256color')
+#      or($ENV{TERM} eq 'putty-256color')
+#      or($ENV{TERM} eq /rxvt-unicode-256color/)
+#      or($ENV{TERM} =~ /u?rxvt-256color/)
+#  ) {
+#    $colors = 256;
+#  }
+#  elsif($ENV{TERM} eq 'rxvt-unicode') {
+#    $colors = 88;
+#  }
+#  elsif($ENV{TERM} eq 'screen') {
+#    $colors = 8;
+#  }
+#  else {
+#    chomp($colors = `tput colors`); # fail silently
+#  }
+#
+#  return $colors;
+#}
 
 
 sub _init_config {
@@ -536,14 +439,7 @@ sub get_ls_where {
 
 
 sub get_ls_cmdline {
-  my $os = get_os();
-
-  if( ($os eq 'darwin') || ($os =~ m/.*bsd$/) ) {
-    return '-lvGcTh ' . join('', @ls_opts);
-  }
-
-  return '-hlv --group-directories-first --color=always --time=ctime ' .
-         '--time-style=+%s ' . join('', @ls_opts);
+  return $opt->{ls_cmdline};
 }
 
 sub escape {
@@ -551,11 +447,6 @@ sub escape {
   $p =~ s/([;<>*|`&\$!#()[\]{}:'" ])/\\$1/g;
   return $p;
 }
-
-sub get_os {
-  return $^O;
-}
-
 
 __END__
 
