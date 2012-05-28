@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.400-dev';
+$VERSION = '0.402-dev';
 
 #use strict;
 #use warnings; #XXX unicode bug
@@ -98,7 +98,7 @@ sub ls {
       # NOTE xterm does not support italics
       $symlink_attr = '';
     }
-    $file =~ s{ ->\s(.+) }{ fg($opt->{symlink_color}, $opt->{symlink_arrow})
+    $file =~ s{ ->\s(.+) }{ fg($opt->{symlink_color}, $opt->{symlink_delimiter})
       . fg($symlink_attr, fg($opt->{symlink_color}, $1))
     }ex;
 
