@@ -136,7 +136,7 @@ sub ls {
       ($file) = $line =~ m/.* \d{6,}? (.+)/;
     }
     elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-        ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year) = split(/\s+/, $line);
+        ($perm, $hlink, $user, $group, $size, $day, $month, $time, $year) = split(/\s+/, $line);
         if( (!$day) ) {
           printf("%s", $line);
           next;
