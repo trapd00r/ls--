@@ -47,11 +47,11 @@ Not known parameters will be passed through to **ls**, so to show hidden files,
 
 ### Mac OS X Installation
 
-    cpan Term::ExtendedColor
+    sudo cpan Term::ExtendedColor
     git clone git://github.com/trapd00r/ls--.git
     cd ls--
     perl Makefile.PL
-    make && sudo 'make install'
+    make && sudo make install
 
     cp ls++.conf $HOME/.ls++.conf
 
