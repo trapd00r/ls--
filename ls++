@@ -22,7 +22,8 @@ if(not _init_config()) {;
   die "No configuration file found\n";
 }
 
-our(@c, @d, %ls_colors, $symlink_delim, $symlink_color);
+our(@c, @d, %ls_colors, $symlink_delim, $symlink_color, $directory_color,
+    $block_color, $character_color, $pipe_color, $socket_color);
 
 my $colors = _get_color_support();
 
@@ -161,6 +162,18 @@ sub ls {
       next;
     }
     $file = add_ls_color($file) unless(!$ENV{DISPLAY});
+
+    if (-d $file && defined $directory_color) {
+        $file = fg($directory_color, uncolor($file));
+    } elsif (-b $file && defined $block_color) {
+        $file = fg($block_color, uncolor($file));
+    } elsif (-c $file && defined $character_color) {
+        $file = fg($character_color, uncolor($file));
+    } elsif (-p $file && defined $pipe_color) {
+        $file = fg($pipe_color, uncolor($file));
+    } elsif (-S $file && defined $socket_color) {
+        $file = fg($socket_color, uncolor($file));
+    }
 
     if(!defined($file)) { # ignored;
       next;
