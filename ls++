@@ -252,6 +252,7 @@ sub add_ls_color {
       }
       $file = $no_ls_color_file;
       $file = fg($ls_colors{$pattern}, $file);
+      return $file;
     }
   }
   return $file;
