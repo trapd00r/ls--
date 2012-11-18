@@ -22,8 +22,9 @@ if(not _init_config()) {;
   die "No configuration file found\n";
 }
 
-our(@c, @d, %ls_colors, $symlink_delim, $symlink_color, $directory_color,
-    $block_color, $character_color, $pipe_color, $socket_color);
+our(@c, @d, %ls_colors, @ls_colors, $symlink_delim, $symlink_color,
+    $directory_color, $block_color, $character_color, $pipe_color,
+    $socket_color);
 
 my $colors = _get_color_support();
 
@@ -243,6 +244,8 @@ sub ls {
 sub add_ls_color {
   my $file = shift;
 
+  # This is to handle the legacy hash based patterns. However, they're
+  # deprecated because they offer no means for ordering.
   for my $pattern(keys(%ls_colors)) {
     my $no_ls_color_file = uncolor($file);
 
@@ -254,6 +257,22 @@ sub add_ls_color {
       $file = fg($ls_colors{$pattern}, $file);
       return $file;
     }
+  }
+
+  # Here's a new array based ls_colors which allows explicit ordering.
+  foreach my $tuple (@ls_colors) {
+      my $pattern = $tuple->[0];
+      my $color = $tuple->[1];
+      my $no_ls_color_file = uncolor($file);
+
+      if($no_ls_color_file =~ /$pattern/) {
+          if($color eq 'IGNORE') {
+              return undef;
+          }
+          $file = $no_ls_color_file;
+          $file = fg($color, $file);
+          return $file;
+      }
   }
   return $file;
 }
