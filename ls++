@@ -158,7 +158,11 @@ sub ls {
 
 
     if( (!$file) ) {
-      next;
+        if ($line =~ /(.*):/){
+            printf("Dir: %s/\n", $1);
+        } else {
+          next;
+      }
     }
     $file = add_ls_color($file) unless(!$ENV{DISPLAY});
 
