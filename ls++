@@ -489,7 +489,7 @@ sub relative_time {
 
 sub _get_color_support {
   my $colors = 8;
-  if(!($ENV{DISPLAY})) {
+  if(exists($ENV{DISPLAY}) && !($ENV{DISPLAY})) {
     $colors = 16;
     return $colors;
   }
