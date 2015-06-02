@@ -250,7 +250,7 @@ sub add_ls_color {
 
 sub perm_file {
   my ($perm, $file) = @_;
-  printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
+  printf("%s %s %s %s\n", $d[0], $perm, $d[3], $file);
 }
 
 
@@ -268,7 +268,7 @@ sub perm_time_size_file {
       $file,
     );
   } else {
-    printf("%s %s%s%s%s%s%s%s\n",
+    printf("%s %s %s%s%s%s%s %s\n",
       $d[0],
       $perm,
       $d[3],
@@ -297,9 +297,9 @@ sub perm_owner_time_size_file {
       $d[2],
       $file,
     );
-  } 
+  }
   else {
-    printf("%s %s%s%s%s%s%s%s%s%s\n",
+    printf("%s %s %s%s%s%s%s%s%s %s\n",
       $d[0],
       $perm,
       $d[3],
