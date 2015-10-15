@@ -10,7 +10,7 @@ ls++ \[OPTION\]... \[FILE\]...
 
 ### GNU/Linux
 
-  ![GNU/Linux screenshot](http://devel.japh.se/App-ls%2b%2b/ls%2b%2b_xterm.png)
+  ![GNU/Linux screenshot](http://i.imgur.com/Hb1GfhE.png)
 
 ### MacOSX / *BSD
 
