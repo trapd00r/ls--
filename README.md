@@ -10,7 +10,7 @@ ls++ \[OPTION\]... \[FILE\]...
 
 ### GNU/Linux
 
-  ![GNU/Linux screenshot](http://i.imgur.com/Hb1GfhE.png)
+  ![GNU/Linux screenshot](http://i.japh.se/ls--_gh_screenshot.png)
 
 ### MacOSX / *BSD
 
