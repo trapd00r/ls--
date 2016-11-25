@@ -145,6 +145,12 @@ sub ls {
 
         $perm =~ s/(?:\+|\@)$//g; # MacOS 'special extended attributes'
 
+        # OSX will order the month/day using the locale of the OS. If the day
+        # is alphanumeric, switch month and day.
+        if ($day =~ /[a-zA-Z]+/) {
+          ($day, $month) = ($month, $day);
+        }
+
         # Mac OS date conversion
         ($hour, $minute, $second) = split(/:/, $time);
         %mon2num = qw(
