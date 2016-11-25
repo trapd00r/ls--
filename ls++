@@ -535,6 +535,7 @@ sub _init_config {
     "$ENV{HOME}/.config/ls++/ls++.conf",
     "$ENV{HOME}/.ls++.conf",
     "$ENV{HOME}/.ls++/ls++.conf",
+    "$ENV{LSPP_CONFIG_DIR}/ls++.conf",
     "/etc/ls++.conf",
   );
 
