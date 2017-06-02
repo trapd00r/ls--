@@ -119,6 +119,7 @@ sub ls {
   my $view = shift // 'perm_size_file';
   my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
   my($second, $minute, $hour, $time, $month, $day, $year, %mon2num); #for Mac OS
+  my $the_time=time();
 
   open(my $ls, '-|', "$ls @ls_opts @ls_where")
     or die("Cant popen $ls: $!");
@@ -180,9 +181,9 @@ sub ls {
     }ex;
 
     if($^O eq 'linux') {
-      $rel = relative_time(time(), $seconds);
+      $rel = relative_time($the_time, $seconds);
     } elsif ( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-      $rel = relative_time(time(), $seconds);
+      $rel = relative_time($the_time, $seconds);
     } else {
       $rel = '';
     }
