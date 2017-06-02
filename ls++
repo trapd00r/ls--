@@ -357,11 +357,66 @@ sub perm {
 }
 
 sub owner {
+  # using user:user as base for max column size
+  my $calling_user = $ENV{USER};
+  my $max_owner_size =()= $calling_user =~ /./sg;
+  $max_owner_size *= 2;
+  # enforcing minimum column width
+  if($max_owner_size < 12){
+    $max_owner_size = 12;
+  }
   my ($user, $group) = @_;
+  my $user_cnt =()= $user =~ /./sg;
+  my $group_cnt =()= $group =~ /./sg;
+  my $total_cnt = $user_cnt + $group_cnt;
+  my $tab = "";
 
+  if($total_cnt < $max_owner_size) {
+    while($total_cnt < $max_owner_size) {
+      $tab = $tab . " ";
+      $total_cnt += 1;
+    }
+  }
+  elsif($total_cnt > $max_owner_size) {
+    # shrinking group name first
+    if($group_cnt > $max_owner_size / 2){
+      while($group_cnt > $max_owner_size / 2){
+        #$group =~ s/.{$group_cnt}\K.*//s;
+        substr($group, $group_cnt -1) = "";
+        $group_cnt -= 1;
+      }
+      # replacing last two chars with dots
+      $group =~ s/..$/\.\./g;
+    }
+
+    if($user_cnt > $max_owner_size / 2){
+      while($user_cnt > $max_owner_size / 2){
+        #$user =~ s/.{$user_cnt}\K.*//s;
+        substr($user, $user_cnt -1) = "";
+        $user_cnt -= 1;
+      }
+      $user =~ s/..$/\.\./g;
+    }
+
+    $total_cnt = $user_cnt + $group_cnt;
+    if($total_cnt > $max_owner_size){
+      while($group_cnt > $max_owner_size / 2){
+        $group =~ s/.{$group_cnt}\K.*//s;
+        $group_cnt -= 1;
+      }
+      $group =~ s/..$/\.\./g;
+    }
+    elsif($total_cnt < $max_owner_size) {
+      while($total_cnt < $max_owner_size) {
+        $tab = $tab . " ";
+        $total_cnt += 1;
+      }
+    }
+  }
   $user  = fg($c[7], $user);
   $group = fg($c[8], $group);
-  return $user . ":". $group;
+
+  return $user . ":". $group . $tab;
 }
 
 sub size {
