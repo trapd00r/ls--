@@ -117,7 +117,7 @@ ls();
 
 sub ls {
   my $view = shift // 'perm_size_file';
-  my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
+  my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel, $major_num, $minor_num);
   my($userpad, $grouppad, $sizelen);
   my($second, $minute, $hour, $time, $month, $day, $year, %mon2num); #for Mac OS
   my $the_time=time();
@@ -128,18 +128,37 @@ sub ls {
   local $/=undef;
   foreach my $sub (split(/\n\n/, <$ls>)) {
   $sizelen = get_max_size_len($sub);
+  printf("maxsize=%s\n", $sizelen);
+  my $special_file;
   foreach my $line (split(/^/, $sub . "\n")) {
+    my $firstchar = substr($line,0,1);
+    if ($firstchar eq "b" || $firstchar eq "c"){ #special block or character files
+      $special_file = 'true';
+    }
+    else {
+      $special_file = 'false';
+    }
     if ($line =~ /^\n$/) {
       print();
       next;
     }
     # Assume GNU coreutils
     if($^O eq 'linux') {
-      ($perm, $hlink, $user, $group, $size, $seconds, $file) = split(/\s+/, $line, 7)
-        unless $line =~ /^\s/;
-        chop($file);
-
-      ($userpad, $grouppad) = $line =~ m/\d+\s+\S+\s(\s*)\S+(\s*)\s.{$sizelen}\s/;
+      if ($special_file ne "true"){
+        ($perm, $hlink, $user, $group, $size, $seconds, $file) = split(/\s+/, $line, 7)
+          unless $line =~ /^\s/;
+          chop($file);
+          ($userpad, $grouppad) = $line =~ m/\d+\s+\S+\s(\s*)\S+(\s*)\s.{$sizelen}\s/;
+        }
+      else {
+        ($perm, $hlink, $user, $group, $major_num, $minor_num, $seconds, $file) = split(/\s+|,\s*/, $line, 8)
+          unless $line =~ /^\s/;
+          $size = $major_num . ",". $minor_num; #special file don't list their size as regular files
+          chop($file);
+          ($userpad, $grouppad) = $line =~ m/\d+\s+\S+\s(\s*)\S+(\s*)\s.{$sizelen}\s/;
+        #printf("%s,%s,%s;size:%s\n", $major_num, $minor_num, $seconds, $size);
+        }
+      printf("userpad, grouppad, line: |%s_%s_%s", $userpad, $grouppad, $line);
     }
     elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
         ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year, $file) = split(/\s+/, $line, 10);
@@ -169,7 +188,9 @@ sub ls {
         printf("\n%s:\n", fg($c[9], fg('bold', $1)));
       }
       elsif( $line =~ /^total (.*)/ ) {
-        printf("%s %s\n", fg($c[1], 'total'), ($size = size($1)) =~ s/\s+//gr);
+        #printf("%s %s\n", fg($c[1], 'total'), ($size = size($1)) =~ s/\s+//gr);
+        (undef, $size) = split(/\s+/, $line);
+        printf("%s %s\n", fg($c[1], 'total'), size($size));
       }
       next;
     }
@@ -243,12 +264,20 @@ sub ls {
 
 sub get_max_size_len {
   my($out) = @_;
-  my($perm, $hlink, $user, $group, $size, $max, $cur);
+  my($perm, $hlink, $user, $group, $size, $size2, $max, $cur);
   $max = 0;
   foreach my $line (split(/^/, $out)) {
-    ($perm, $hlink, $user, $group, $size) = split(/\s+/, $line);
+    if ($line =~ /,/){ #special file
+        (undef, undef, undef, undef, $size, $size2) = split(/\s+/, $line);
+        $size = $size . $size2;
+    }
+    else
+    {
+        (undef, undef, undef, undef, $size) = split(/\s+/, $line);
+    }
     $cur = length($size);
     $max = ($max, $cur)[$max < $cur];
+    printf("size, cur, max: %s_%s_%s\n", $size, $cur, $max);
   }
   return $max;
 }
@@ -388,6 +417,9 @@ sub owner {
 
 sub size {
   my ($size) = @_;
+  if ($size =~ /,/){
+        return $size;
+    }
   #FIXME
   if($colors > 16) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
