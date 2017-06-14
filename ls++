@@ -129,7 +129,6 @@ sub ls {
   local $/=undef;
   foreach my $sub (split(/\n\n/, <$ls>)) {
   ($sizelen, $permlen) = get_max_col_len($sub);
-  printf("sizelen, perm_len: %s,%s\n", $sizelen, $permlen);
   my $special_file;
   foreach my $line (split(/^/, $sub . "\n")) {
     my $firstchar = substr($line,0,1);
