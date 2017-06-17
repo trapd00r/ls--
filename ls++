@@ -25,6 +25,7 @@ if(not _init_config()) {;
 our(@c, @d, %ls_colors, $symlink_delim, $symlink_color);
 
 my $colors = _get_color_support();
+my ($sizelen, $stringlen, $permlen);
 
 $ENV{DEBUG} and print "$_ x\n" for @c;
 
@@ -117,8 +118,8 @@ ls();
 
 sub ls {
   my $view = shift // 'perm_size_file';
-  my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
-  my($userpad, $grouppad, $sizelen);
+  my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel, $major_num, $minor_num);
+  my($userpad, $grouppad);
   my($second, $minute, $hour, $time, $month, $day, $year, %mon2num); #for Mac OS
   my $the_time=time();
 
@@ -127,19 +128,35 @@ sub ls {
 
   local $/=undef;
   foreach my $sub (split(/\n\n/, <$ls>)) {
-  $sizelen = get_max_size_len($sub);
+  ($sizelen, $permlen) = get_max_col_len($sub);
+  my $special_file;
   foreach my $line (split(/^/, $sub . "\n")) {
+    my $firstchar = substr($line,0,1);
+    if ($firstchar eq "b" || $firstchar eq "c"){
+      # probably special block or character file
+      $special_file = 'true';
+    }
+    else {
+      $special_file = 'false';
+    }
     if ($line =~ /^\n$/) {
       print();
       next;
     }
     # Assume GNU coreutils
     if($^O eq 'linux') {
-      ($perm, $hlink, $user, $group, $size, $seconds, $file) = split(/\s+/, $line, 7)
-        unless $line =~ /^\s/;
-        chop($file);
-
-      ($userpad, $grouppad) = $line =~ m/\d+\s+\S+\s(\s*)\S+(\s*)\s.{$sizelen}\s/;
+      if ($special_file ne "true"){
+        ($perm, $hlink, $user, $group, $size, $seconds, $file) = split(/\s+/, $line, 7)
+          unless $line =~ /^\s/;
+          chop($file);
+      }
+      else {
+        ($perm, $hlink, $user, $group, $major_num, $minor_num, $seconds, $file) = split(/\s+|,\s*/, $line, 8)
+          unless $line =~ /^\s/;
+          $size = $major_num . ",". $minor_num; #special files don't list their size like regular files do
+          chop($file);
+      }
+    ($userpad, $grouppad) = $line =~ m/\d+\s+\S+\s(\s*)\S+(\s*)\s.{$sizelen}\s\d+\s+.*/;
     }
     elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
         ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year, $file) = split(/\s+/, $line, 10);
@@ -169,6 +186,7 @@ sub ls {
         printf("\n%s:\n", fg($c[9], fg('bold', $1)));
       }
       elsif( $line =~ /^total (.*)/ ) {
+        (undef, $size) = split(/\s+/, $line);
         printf("%s %s\n", fg($c[1], 'total'), ($size = size($1)) =~ s/\s+//gr);
       }
       next;
@@ -212,7 +230,7 @@ sub ls {
     # OK, probably GNU/Linux
     else {
       $size = size($size);
-      $size =~ s/^\s{3}(.+)/$1 /;
+      #$size =~ s/\s{3}(.+)/$1 /; # probably not useful anymore
     }
 
     my $user = owner($userpad . $user, $group . $grouppad);
@@ -241,16 +259,23 @@ sub ls {
   }
 }
 
-sub get_max_size_len {
+sub get_max_col_len {
   my($out) = @_;
-  my($perm, $hlink, $user, $group, $size, $max, $cur);
-  $max = 0;
+  my($perm, $size, $max_size, $cur_size, $max_perm, $cur_perm);
+  $max_size = 0;
+  $max_perm = 0;
   foreach my $line (split(/^/, $out)) {
-    ($perm, $hlink, $user, $group, $size) = split(/\s+/, $line);
-    $cur = length($size);
-    $max = ($max, $cur)[$max < $cur];
+    ($perm, undef, undef, undef, $size) = split(/\s+/, $line);
+    $cur_size = length($size);
+    $cur_perm = length($perm);
+    #special files show between 4 and 7 characters + 1 space: 255, 255
+    if ($line =~ /\d+,\s+\d+/){
+        $cur_size += 4;
+    }
+    $max_size = ($max_size, $cur_size)[$max_size < $cur_size];
+    $max_perm = ($max_perm, $cur_perm)[$max_perm < $cur_perm];
   }
-  return $max;
+  return $max_size, $max_perm;
 }
 
 sub add_ls_color {
@@ -353,7 +378,7 @@ sub perm_size_file {
     printf("%s%s%s%s%s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
   }
   else {
-    printf("%s%s%s%19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
+    printf("%s%s%s%*s%s%s\n", $d[0], $perm, $d[3], $stringlen, $size, $d[2], $file);
   }
 }
 
@@ -362,6 +387,10 @@ sub perm_size_file {
 
 sub perm {
   my ($perm) = @_;
+  if (length($perm) < $permlen){
+    # adding an extra space to align with occasional +
+    $perm .= " ";
+  }
 
   $perm =~ s/-/$d[1]/g;
   $perm =~ s/(r)/fg($c[2], $1)/eg;
@@ -388,30 +417,44 @@ sub owner {
 
 sub size {
   my ($size) = @_;
+  if ($size =~ /\d+,\s*\d+/){ # not size but major/minor values for special files
+    $size = sprintf("%*s", $sizelen, $size);
+    return $size;
+  }
   #FIXME
   if($colors > 16) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
+    if($sizelen < 4){ # constraining size length between 4 and 8 characters max
+        $stringlen = 4;
+    }
+    elsif($sizelen >= 8){
+        $stringlen = 7;
+    }
+    else
+    {
+        $stringlen = $sizelen;
+    }
     if($size =~ m/^(\S+)(K)/) {
       $size = sprintf("%27s",
-        fg($c[7], sprintf("%4g", $1))
+        fg($c[7], sprintf("%*g", $stringlen, $1))
           . fg($c[2], fg('bold', $2))
         );
     }
     elsif($size =~ m/^(\S+)(M)/) {
       $size = sprintf("%29s",
-        fg($c[7], sprintf("%4g", $1))
+        fg($c[7], sprintf("%*g", $stringlen, $1))
           . fg($c[4], fg('bold', $2))
         );
     }
     elsif($size =~ m/^(\S+)(G)/) {
       $size = sprintf("%27s",
-        fg($c[7], sprintf("%4g", $1))
+        fg($c[7], sprintf("%*g", $stringlen, $1))
           . fg($c[3], fg('bold', $2))
         );
     }
     elsif($size =~ m/^(\d+)/) {
       $size = sprintf("%27s",
-        fg($c[7], sprintf("%4d", $1))
+        fg($c[7], sprintf("%*d", $stringlen, $1))
           . fg($c[14], fg('bold', 'B'))
         );
     }
