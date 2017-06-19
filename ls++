@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.348';
+$VERSION = '0.36';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -599,7 +599,7 @@ sub _init_config {
     "$ENV{HOME}/.config/ls++/ls++.conf",
     "$ENV{HOME}/.ls++.conf",
     "$ENV{HOME}/.ls++/ls++.conf",
-    "/etc/ls++.conf",
+    "/home/scp1/perl5/etc/ls++.conf",
   );
 
   for my $conf(@locations) {
