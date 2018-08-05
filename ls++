@@ -461,7 +461,7 @@ sub size {
       return $size;
   }
 
-  # Special case for tmux / screen, only 8 colors
+  # Special case for tmux / screen, only 8 colors, no bold
   elsif($ENV{TERM} eq 'screen') {
     return $size
       if ($size =~ s/(.*)(K)/sprintf("%s%s%s%s", fg($c[2], sprintf("%*g", $stringlen, $1)), fg($c[2], ''), $2, fg($c[16], ''))/e);
@@ -470,7 +470,7 @@ sub size {
     return sprintf("%*s", $stringlen, $size)
       if ($size =~ s/(.*)(G)/sprintf("%s%s%s", fg($c[3], sprintf("%*g", $stringlen, $1)), $2, fg($c[16], ''))/e);
     return sprintf("%*s", $stringlen, $size)
-      if ($size =~ s/(\d+)/sprintf("%s%s%s", fg($c[14], sprintf("%*d", $stringlen, $1)), fg('bold','B'), fg($c[16], ''))/e);
+      if ($size =~ s/(\d+)/sprintf("%s%s%s", fg($c[14], sprintf("%*d", $stringlen, $1)), 'B', fg($c[16], ''))/e);
   }
   # ANSI
   else {

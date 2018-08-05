@@ -10,7 +10,7 @@ ls++ \[OPTION\]... \[FILE\]...
 
 ### GNU/Linux
 
-  ![GNU/Linux screenshot](http://i.japh.se/ls--_gh_screenshot.png)
+  ![GNU/Linux screenshot](https://i.imgur.com/wV2HXFz.png)
 
 ### MacOSX / *BSD
 
@@ -32,7 +32,7 @@ Not known parameters will be passed through to **ls**, so to show hidden files,
     --tpf   time, permissions, file
     --tpsf  time, permissions, size, file (default)
     --ptsf  permissions, time, size, file
-    --potsf permissions, owners, time, size, file
+    --potsf permissions, owners, time, size, file (recommended)
 
 # INSTALLATION
 
