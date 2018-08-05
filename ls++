@@ -421,19 +421,19 @@ sub size {
     $size = sprintf("%*s", $sizelen, $size);
     return $size;
   }
+  if($sizelen < 4){ # constraining size length between 4 and 8 characters max
+      $stringlen = 4;
+  }
+  elsif($sizelen >= 8){
+      $stringlen = 7;
+  }
+  else
+  {
+      $stringlen = $sizelen;
+  }
   #FIXME
   if($colors > 16) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
-    if($sizelen < 4){ # constraining size length between 4 and 8 characters max
-        $stringlen = 4;
-    }
-    elsif($sizelen >= 8){
-        $stringlen = 7;
-    }
-    else
-    {
-        $stringlen = $sizelen;
-    }
     if($size =~ m/^(\S+)(K)/) {
       $size = sprintf("%27s",
         fg($c[7], sprintf("%*g", $stringlen, $1))
@@ -461,6 +461,17 @@ sub size {
       return $size;
   }
 
+  # Special case for tmux / screen, only 8 colors
+  elsif($ENV{TERM} eq 'screen') {
+    return $size
+      if ($size =~ s/(.*)(K)/sprintf("%s%s%s%s", fg($c[2], sprintf("%*g", $stringlen, $1)), fg($c[2], ''), $2, fg($c[16], ''))/e);
+    return sprintf("%*s", $stringlen,  $size)
+      if ($size =~ s/(.*)(M)/sprintf("%s%s%s", fg($c[7], sprintf("%*g", $stringlen, $1)), $2, fg($c[16], ''))/e);
+    return sprintf("%*s", $stringlen, $size)
+      if ($size =~ s/(.*)(G)/sprintf("%s%s%s", fg($c[3], sprintf("%*g", $stringlen, $1)), $2, fg($c[16], ''))/e);
+    return sprintf("%*s", $stringlen, $size)
+      if ($size =~ s/(\d+)/sprintf("%s%s%s", fg($c[14], sprintf("%*d", $stringlen, $1)), fg('bold','B'), fg($c[16], ''))/e);
+  }
   # ANSI
   else {
     return sprintf("% 26s", $size)
