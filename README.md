@@ -11,6 +11,7 @@ ls++ \[OPTION\]... \[FILE\]...
 ### GNU/Linux
 
   ![GNU/Linux screenshot](https://i.imgur.com/wV2HXFz.png)
+  ![GNU/Linux screenshot](https://i.imgur.com/ZWMZhe9.png)
 
 ### MacOSX / *BSD
 
@@ -55,6 +56,10 @@ Not known parameters will be passed through to **ls**, so to show hidden files,
     make && sudo 'make install'
 
     cp ls++.conf $HOME/.ls++.conf
+
+# Notes
+
+Under the hood, this script runs `ls` twice in order to compute column sizes properly.
 
 # HISTORY
 
