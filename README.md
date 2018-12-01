@@ -1,24 +1,17 @@
-# NAME
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=65SFZJ25PSKG8&currency_code=SEK&source=url) - Every tiny cent helps a lot!
+
 
 ls++ - colorized ls on steroids
+------------------------------
+
+
+![GNU/Linux screenshot](/doc/ls++.png)
+
 
 # USAGE
 
 ls++ \[OPTION\]... \[FILE\]...
-
-# DESCRIPTION
-
-### GNU/Linux
-
-  ![GNU/Linux screenshot](http://i.japh.se/ls--_gh_screenshot.png)
-
-### MacOSX / *BSD
-
-  ![Mac OS X screenshot](http://devel.japh.se/App-ls%2b%2b/ls%2b%2b_macosx.png)
-
-### GNU/Linux TTY/VC
-
-  TODO
 
 # OPTIONS
 
@@ -96,7 +89,7 @@ different views and possibility to ignore as well as highlight specific files.
 
 # COPYRIGHT
 
-Copyright 2010, 2011 the **ls++** AUTHOR and CONTRIBUTORS as listed above.
+Copyright 2010, 2011, 2018 the **ls++** AUTHOR and CONTRIBUTORS as listed above.
 
 # SEE ALSO
 
