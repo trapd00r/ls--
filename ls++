@@ -1,7 +1,8 @@
 #!/usr/bin/perl
+# vim:ft=perl:et:
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.36';
+$VERSION = '0.38';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -289,7 +290,12 @@ sub add_ls_color {
         return undef;
       }
       $file = $no_ls_color_file;
-      $file = fg($ls_colors{$pattern}, $file);
+
+#      # add attributes
+#      # 'README$' => 'bold italic 220 underline',
+      for my $attr(split(/ /, $ls_colors{$pattern})) {
+        $file = fg($attr, $file);
+      }
     }
   }
   return $file;
@@ -397,7 +403,7 @@ sub perm {
   $perm =~ s/(w)/fg($c[7], $1)/eg;
   $perm =~ s/(x)/fg($c[1], $1)/eg;
 
-  $perm =~ s/(d)/fg($c[2],  fg('bold', $1))/eg;
+  $perm =~ s/(d)/fg($c[16],   fg('bold', $1))/eg;
   $perm =~ s/(l)/fg($c[8],  fg('bold', $1))/eg;
   $perm =~ s/(s)/fg($c[11], $1)/eg;
   $perm =~ s/(S)/fg($c[8],  $1)/eg;
