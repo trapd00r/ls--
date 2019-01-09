@@ -13,7 +13,7 @@ WriteMakefile1(
     #},
 
     NAME                => 'App::ls++',
-    AUTHOR              => q{Magnus Woldrich <magnus@trapd00r.se>},
+    AUTHOR              => q{Magnus Woldrich <m@japh.se>},
     ABSTRACT           => 'ls on steroids',
     VERSION_FROM        => './ls++',
     'LICENSE'           => 'perl',
