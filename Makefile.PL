@@ -12,22 +12,23 @@ WriteMakefile1(
     #BUILD_REQUIRES => {
     #},
 
-    NAME                => 'App::ls++',
-    AUTHOR              => q{Magnus Woldrich <m@japh.se>},
-    ABSTRACT           => 'ls on steroids',
-    VERSION_FROM        => './ls++',
-    'LICENSE'           => 'perl',
-    PL_FILES            => {},
-    EXE_FILES =>           ['ls++'],
-    PREREQ_PM => {
+    NAME                    => 'App::lsplusplus',
+    AUTHOR                  => q{Magnus Woldrich <m@japh.se>},
+    ABSTRACT                => 'ls on steroids',
+    VERSION_FROM            => './ls++',
+    'LICENSE'               => 'perl',
+    PL_FILES                => {},
+    EXE_FILES               => ['ls++'],
+    PREREQ_PM               => {
       'Term::ExtendedColor' => 0.16,
+      'Time::Local'         => 0.16,
     },
-    MAN1PODS            => {
-      'ls++'            => 'blib/man1/ls++.1',
-      'ls++.conf'       => 'blib/man1/ls++.conf.1',
+    MAN1PODS                => {
+      'ls++'                => 'blib/man1/ls++.1',
+      'ls++.conf'           => 'blib/man1/ls++.conf.1',
       },
-    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'ls++-*' },
+    dist                    => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
+    clean                   => { FILES => 'ls++-*' },
 );
 
 sub WriteMakefile1 {
