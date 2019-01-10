@@ -68,19 +68,9 @@ sub WriteMakefile1 {
     WriteMakefile(%params);
 }
 
-#sub MY::postamble {
-#q{
-#all :: sysconfdir
-#
-#sysconfdir_scripts=ls++
-#
-#sysconfdir:
-#	$(PERL) -pi -e "s|\"/etc/ls\+\+\.conf|\"$(PREFIX)/etc/ls++.conf|g" $(sysconfdir_scripts)
-#
-#install_vendor :: ls++.conf
-#	[ ! -d $(DESTDIR)/$(PREFIX)/etc ] && mkdir -p $(DESTDIR)/$(PREFIX)/etc
-#	[ ! -f $(DESTDIR)/$(PREFIX)/etc/ls++.conf ] && cp ls++.conf $(DESTDIR)/$(PREFIX)/etc/ls++.conf
-#
-#install :: install_vendor
-#}
-#}
+sub MY::postamble {
+  return qq{
+    install :: ls++.conf
+	[ ! -f $ENV{HOME}/.ls++.conf ] && cp -v ls++.conf $ENV{HOME}/.ls++.conf
+  };
+}
