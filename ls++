@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # vim:ft=perl:et:
 my $APP = 'ls++';
-our $VERSION = '0.48';
+our $VERSION = '0.50';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -295,7 +295,9 @@ sub add_ls_color {
 
     # check if file is a directory and add a / suffix for simple
     # matching in ls++.conf
-    -d $no_ls_color_file and $no_ls_color_file .= '/';
+    if(-d $no_ls_color_file) {
+      $no_ls_color_file .= '/' unless $no_ls_color_file =~ m{/$};
+    }
 
     if($no_ls_color_file =~ m{$pattern}) {
       $file = $no_ls_color_file;
@@ -310,12 +312,12 @@ sub add_ls_color {
         # if several attributes are specified, the END sequence is added
         # more than once. let's get rid of it so we can remove match and
         # remove the trailing /
-        $file =~ s{(\e\[m)+}{$1}g;
+        $file =~ s{(\e\[0?m)+}{$1}g;
       }
     }
   }
   # remove the trailing slash again
-  $file =~ s{/(\e\[m)$}{$1};
+  $file =~ s{/(\e\[0?m)$}{$1};
   return $file;
 }
 
@@ -744,7 +746,7 @@ crshd added optional user:group display.
 
 =head1 COPYRIGHT
 
-Copyright 2010, 2011 the B<ls++> L</AUTHOR> and L</CONTRIBUTORS> as listed
+Copyright 2010, 2011, 2018- the B<ls++> L</AUTHOR> and L</CONTRIBUTORS> as listed
 above.
 
 =head1 LICENSE
