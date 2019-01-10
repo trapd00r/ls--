@@ -2,7 +2,7 @@
 # vim:ft=perl:et:
 my $APP = 'ls++';
 use vars qw($VERSION);
-$VERSION = '0.38';
+$VERSION = '0.40';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -285,7 +285,11 @@ sub add_ls_color {
   for my $pattern(keys(%ls_colors)) {
     my $no_ls_color_file = uncolor($file);
 
-    if($no_ls_color_file =~ /$pattern/) {
+    # check if file is a directory and add a / suffix for simple
+    # matching in ls++.conf
+    -d $no_ls_color_file and $no_ls_color_file .= '/';
+
+    if($no_ls_color_file =~ m{$pattern}) {
       if($ls_colors{$pattern} eq 'IGNORE') {
         return undef;
       }
