@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 # vim:ft=perl:et:
+package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.50';
+our $VERSION = '0.52';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
@@ -31,7 +32,7 @@ if(not _init_config()) {;
   die "No configuration file found\n";
 }
 
-our(@c, @d, %ls_colors, $symlink_delim, $symlink_color);
+our(@c, @d, %ls_colors, $symlink_delim, $symlink_color, $symlink_attr);
 
 my $colors = _get_color_support();
 my ($sizelen, $stringlen, $permlen);
@@ -206,7 +207,6 @@ sub ls {
       next;
     }
 
-    my $symlink_attr = 'italic';
     if($ENV{TERM} =~ m/xterm/) {
       # NOTE xterm does not support italics
       $symlink_attr = '';
@@ -682,6 +682,8 @@ sub get_os {
 }
 
 
+
+1;
 __END__
 
 
