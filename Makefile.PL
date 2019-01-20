@@ -12,22 +12,30 @@ WriteMakefile1(
     #BUILD_REQUIRES => {
     #},
 
-    NAME                => 'App::ls++',
-    AUTHOR              => q{Magnus Woldrich <magnus@trapd00r.se>},
-    ABSTRACT           => 'ls on steroids',
-    VERSION_FROM        => './ls++',
-    'LICENSE'           => 'perl',
-    PL_FILES            => {},
-    EXE_FILES =>           ['ls++'],
-    PREREQ_PM => {
+    NAME                    => 'App::lsplusplus',
+    AUTHOR                  => q{Magnus Woldrich <m@japh.se>},
+    ABSTRACT                => 'ls on steroids',
+    VERSION_FROM            => './ls++',
+    'LICENSE'               => 'perl',
+    PL_FILES                => {},
+    EXE_FILES               => ['./ls++'],
+    PREREQ_PM               => {
       'Term::ExtendedColor' => 0.16,
+      'Time::Local'         => 0.16,
     },
-    MAN1PODS            => {
-      'ls++'            => 'blib/man1/ls++.1',
-      'ls++.conf'       => 'blib/man1/ls++.conf.1',
+    MAN1PODS                => {
+      'ls++'                => 'blib/man1/ls++.1',
+      'ls++.conf'           => 'blib/man1/ls++.conf.1',
       },
-    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'ls++-*' },
+    META_ADD                     => {
+      provides => {
+        'App::lsplusplus' => {
+          file => './ls++',
+        },
+      },
+    },
+    dist                    => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
+    clean                   => { FILES => 'ls++-*' },
 );
 
 sub WriteMakefile1 {
@@ -61,18 +69,8 @@ sub WriteMakefile1 {
 }
 
 sub MY::postamble {
-q{
-all :: sysconfdir
-
-sysconfdir_scripts=ls++
-
-sysconfdir:
-	$(PERL) -pi -e "s|\"/etc/ls\+\+\.conf|\"$(PREFIX)/etc/ls++.conf|g" $(sysconfdir_scripts)
-
-install_vendor :: ls++.conf
-	[ ! -d $(DESTDIR)/$(PREFIX)/etc ] && mkdir -p $(DESTDIR)/$(PREFIX)/etc
-	[ ! -f $(DESTDIR)/$(PREFIX)/etc/ls++.conf ] && cp ls++.conf $(DESTDIR)/$(PREFIX)/etc/ls++.conf
-
-install :: install_vendor
-}
+  return qq{
+    install :: ls++.conf
+	[ ! -f $ENV{HOME}/.ls++.conf ] && cp -v ls++.conf $ENV{HOME}/.ls++.conf
+  };
 }
