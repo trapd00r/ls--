@@ -2,21 +2,22 @@
 # vim:ft=perl:et:
 package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.52';
+our $VERSION = '0.54';
+$App::lsplusplus::VERSION = '0.54';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
 use Time::Local;
-#use Data::Dumper;
-#
-#{
-#  package Data::Dumper;
-#  no strict 'vars';
-#  $Terse = $Indent = $Useqq = $Deparse = $Sortkeys = 1;
-#  $Quotekeys = 0;
-#}
+use Data::Dumper;
+
+{
+  package Data::Dumper;
+  no strict 'vars';
+  $Terse = $Indent = $Useqq = $Deparse = $Sortkeys = 1;
+  $Quotekeys = 0;
+}
 
 
 my $ls       = '/bin/ls';
@@ -307,7 +308,7 @@ sub add_ls_color {
 
 #      # add attributes
 #      # 'README$' => 'bold italic 220 underline',
-      for my $attr(split(/ /, $ls_colors{$pattern})) {
+      for my $attr(split(/\s+/, $ls_colors{$pattern})) {
         $file = fg($attr, $file);
         # if several attributes are specified, the END sequence is added
         # more than once. let's get rid of it so we can remove match and
@@ -318,6 +319,7 @@ sub add_ls_color {
   }
   # remove the trailing slash again
   $file =~ s{/(\e\[0?m)$}{$1};
+#  print Dumper $file;
   return $file;
 }
 
@@ -469,7 +471,7 @@ sub size {
     elsif($size =~ m/^(\S+)(M)/) {
       $size = sprintf("%29s",
         fg($c[7], sprintf("%*g", $stringlen, $1))
-          . fg($c[4], fg('bold', $2))
+          . fg($c[9], fg('bold', $2))
         );
     }
     elsif($size =~ m/^(\S+)(G)/) {

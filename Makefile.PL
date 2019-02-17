@@ -5,17 +5,19 @@ use ExtUtils::MakeMaker;
 WriteMakefile1(
     META_MERGE => {
         resources => {
-            repository => 'https://github.com/trapd00r/ls--',
-            bugtracker => 'https://github.com/trapd00r/ls--/issues',
+            repository => {
+              type       => 'git',
+              url        => 'https://github.com/trapd00r/ls--.git',
+              web        => 'https://github.com/trapd00r/ls--',
+              bugtracker => 'https://github.com/trapd00r/ls--/issues',
         },
+      },
     },
-    #BUILD_REQUIRES => {
-    #},
 
     NAME                    => 'App::lsplusplus',
     AUTHOR                  => q{Magnus Woldrich <m@japh.se>},
     ABSTRACT                => 'ls on steroids',
-    VERSION_FROM            => './ls++',
+    VERSION_FROM            => q{ls++},
     'LICENSE'               => 'perl',
     PL_FILES                => {},
     EXE_FILES               => ['./ls++'],
