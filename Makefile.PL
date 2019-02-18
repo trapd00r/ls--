@@ -4,12 +4,13 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile1(
     META_MERGE => {
-        resources => {
-            repository => {
-              type       => 'git',
-              url        => 'https://github.com/trapd00r/ls--.git',
-              web        => 'https://github.com/trapd00r/ls--',
-              bugtracker => 'https://github.com/trapd00r/ls--/issues',
+      q(meta-spec) => { version => 2 },
+      resources => {
+        repository => {
+          type       => 'git',
+          url        => 'https://github.com/trapd00r/ls--.git',
+          web        => 'https://github.com/trapd00r/ls--',
+          bugtracker => 'https://github.com/trapd00r/ls--/issues',
         },
       },
     },

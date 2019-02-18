@@ -2,8 +2,8 @@
 # vim:ft=perl:et:
 package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.54';
-$App::lsplusplus::VERSION = '0.54';
+our $VERSION = '0.56';
+$App::lsplusplus::VERSION = '0.56';
 
 use strict;
 use Term::ExtendedColor qw(fg uncolor);
