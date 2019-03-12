@@ -2,10 +2,12 @@
 # vim:ft=perl:et:
 package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.56';
-$App::lsplusplus::VERSION = '0.56';
+our $VERSION = '0.58';
+$App::lsplusplus::VERSION = '0.58';
 
 use strict;
+use utf8;
+use open qw(:std :utf8);
 use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
