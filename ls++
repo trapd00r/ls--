@@ -13,6 +13,7 @@ use Pod::Usage;
 use Getopt::Long;
 use Time::Local;
 use Data::Dumper;
+use locale;
 
 {
   package Data::Dumper;
@@ -447,10 +448,11 @@ sub owner {
 
 sub size {
   my ($size) = @_;
-  if ($size =~ /\d+,\s*\d+/){ # not size but major/minor values for special files
+  if ($size =~ /\d+,\s*\d+$/){ # not size but major/minor values for special files
     $size = sprintf("%*s", $sizelen, $size);
     return $size;
   }
+  $size =~ s/,/./;
   #FIXME
   if($colors > 16) {
     #$size =~ s/(\S+)(K)/$c[2]$1\e[0m$c[4]$2\e[0m/gi;# and print "AA\n";
