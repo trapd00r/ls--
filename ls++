@@ -174,7 +174,7 @@ sub ls {
     ($userpad, $grouppad) = $line =~ m/\d+\s+\S+\s(\s*)\S+(\s*)\s.{$sizelen}\s\d+\s+.*/;
     }
     elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
-        ($perm, $hlink, $user, $group, $size, $month, $day, $time, $year, $file) = split(/\s+/, $line, 10);
+        ($perm, $hlink, $user, $group, $size, $day, $month, $time, $year, $file) = split(/\s+/, $line, 10);
         chop($file);
         if( (!$day) ) {
           printf("%s", $line);
@@ -378,7 +378,7 @@ sub perm_owner_time_size_file {
       $d[2],
       $file,
     );
-  } 
+  }
   else {
     printf("%s %s%s%s%s%s%s%s%s%s\n",
       $d[0],
