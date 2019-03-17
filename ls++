@@ -2,8 +2,8 @@
 # vim:ft=perl:et:
 package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.58';
-$App::lsplusplus::VERSION = '0.58';
+our $VERSION = '0.60';
+$App::lsplusplus::VERSION = '0.60';
 
 use strict;
 use utf8;
@@ -12,15 +12,15 @@ use Term::ExtendedColor qw(fg uncolor);
 use Pod::Usage;
 use Getopt::Long;
 use Time::Local;
-use Data::Dumper;
+#use Data::Dumper;
 use locale;
 
-{
-  package Data::Dumper;
-  no strict 'vars';
-  $Terse = $Indent = $Useqq = $Deparse = $Sortkeys = 1;
-  $Quotekeys = 0;
-}
+#{
+#  package Data::Dumper;
+#  no strict 'vars';
+#  $Terse = $Indent = $Useqq = $Deparse = $Sortkeys = 1;
+#  $Quotekeys = 0;
+#}
 
 
 my $ls       = '/bin/ls';
@@ -607,7 +607,7 @@ sub _get_color_support {
     $colors = 88;
   }
   elsif($ENV{TERM} eq 'screen') {
-    $colors = 8;
+    $colors = $ENV{TMUX} ? 256 : 8;
   }
   else {
     chomp($colors = `tput colors`); # fail silently
