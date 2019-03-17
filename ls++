@@ -2,7 +2,7 @@
 # vim:ft=perl:et:
 package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.62';
+our $VERSION = '0.64';
 $App::lsplusplus::VERSION = '0.62';
 
 use strict;
@@ -634,7 +634,6 @@ sub _init_config {
     "$ENV{HOME}/.config/ls++/ls++.conf",
     "$ENV{HOME}/.ls++.conf",
     "$ENV{HOME}/.ls++/ls++.conf",
-    "/home/scp1/perl5/etc/ls++.conf",
   );
 
   for my $conf(@locations) {
