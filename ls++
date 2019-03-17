@@ -378,7 +378,7 @@ sub perm_owner_time_size_file {
       $d[2],
       $file,
     );
-  }
+  } 
   else {
     printf("%s %s%s%s%s%s%s%s%s%s\n",
       $d[0],
