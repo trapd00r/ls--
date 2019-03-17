@@ -3,7 +3,7 @@
 package App::lsplusplus;
 my $APP = 'ls++';
 our $VERSION = '0.62';
-$App::lsplusplus::VERSION = '0.60';
+$App::lsplusplus::VERSION = '0.62';
 
 use strict;
 use utf8;
