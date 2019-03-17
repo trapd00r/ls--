@@ -2,13 +2,14 @@
 # vim:ft=perl:et:
 package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.60';
+our $VERSION = '0.62';
 $App::lsplusplus::VERSION = '0.60';
 
 use strict;
 use utf8;
 use open qw(:std :utf8);
 use Term::ExtendedColor qw(fg uncolor);
+use File::LsColor;
 use Pod::Usage;
 use Getopt::Long;
 use Time::Local;
@@ -197,7 +198,9 @@ sub ls {
 
     if( (!$file) ) {
       if( $line =~ /(.*):/ ) {
-        printf("\n%s:\n", fg($c[9], fg('bold', $1)));
+        # for situations like ls ~/dev/*; print the directory summary
+        # with correct LS_COLORS attribute
+        printf("\n%s:\n", fg(File::LsColor::can_ls_color('di'), $1));
       }
       elsif( $line =~ /^total (.*)/ ) {
         (undef, $size) = split(/\s+/, $line);

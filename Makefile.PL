@@ -25,6 +25,7 @@ WriteMakefile1(
     PREREQ_PM               => {
       'Term::ExtendedColor' => 0.16,
       'Time::Local'         => 0.16,
+      'File::LsColor'       => 0.498,
     },
     MAN1PODS                => {
       'ls++'                => 'blib/man1/ls++.1',
