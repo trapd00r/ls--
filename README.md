@@ -29,25 +29,74 @@ Not known parameters will be passed through to **ls**, so to show hidden files,
 
 # INSTALLATION
 
-### GNU/Linux Installation
+Packages exist for several linux distributions:
 
-    cpan Term::ExtendedColor
-    git clone git://github.com/trapd00r/ls--.git
-    cd ls--
-    perl Makefile.PL
-    make && su -c 'make install'
+## Archlinux
 
-    cp ls++.conf $HOME/.ls++.conf
+    pacman -S ls++
+
+## Debian, Ubuntu
+
+    apt-get install ls++
+
+## SUSE
+
+    yast -i ls++
+
+
+## Other / Bleeding edge
+
+I recommend using the [cpanminus](https://metacpan.org/pod/App::cpanminus)
+cpan client and doing a
+
+    alias cpan=cpanm
+
+in your shellrc. The program will be there in your normal repositories. :)
+
+
+    # cpanm Term::ExtendedColor File::LsColor
+    $ git clone git://github.com/trapd00r/ls--.git
+    $ cd ls--
+    $ perl Makefile.PL
+    $ make && su -c 'make install'
+
+    $ cp ls++.conf $HOME/.ls++.conf
+
+## Install from git locally in your $HOME:
+
+    $ mkdir -p $HOME/lib/perl5
+    $ export PERL5LIB=${HOME}/lib/perl5
+    $ export PERL_MM_OPT="INSTALL_BASE=${PERL5LIB}"
+    $ cpanm Term::ExtendedColor File::LsColor
+
+    $ git clone git://github.com/trapd00r/ls--.git
+    $ cd ls--
+    $ perl Makefile.PL
+    $ make
+    $ make install
+
+    $ cp ls++.conf $HOME/ls++.conf
+
+## Install from CPAN locally; managing dependencies automatically:
+
+    $ mkdir -p $HOME/lib/perl5
+    $ export PERL5LIB=${HOME}/lib/perl5
+    $ export PERL_MM_OPT="INSTALL_BASE=${PERL5LIB}"
+    $ cpan App::lsplusplus
+
+If you want to install it globaly, you just skip the first three steps
+and run the cpan command as root.
+
 
 ### Mac OS X Installation
 
-    cpan Term::ExtendedColor
-    git clone git://github.com/trapd00r/ls--.git
-    cd ls--
-    perl Makefile.PL
-    make && sudo 'make install'
+    # cpan Term::ExtendedColor File::LsColor
+    $ git clone git://github.com/trapd00r/ls--.git
+    $ cd ls--
+    $ perl Makefile.PL
+    $ make && sudo 'make install'
 
-    cp ls++.conf $HOME/.ls++.conf
+    $ cp ls++.conf $HOME/.ls++.conf
 
 # HISTORY
 
