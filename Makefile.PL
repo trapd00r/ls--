@@ -72,9 +72,9 @@ sub WriteMakefile1 {
     WriteMakefile(%params);
 }
 
-sub MY::postamble {
-  return qq{
-    install :: ls++.conf
-	[ ! -f $ENV{HOME}/.ls++.conf ] && cp -v ls++.conf $ENV{HOME}/.ls++.conf
-  };
-}
+#sub MY::postamble {
+#  return qq{
+#    install :: ls++.conf
+#	[ ! -f $ENV{HOME}/.ls++.conf ] && cp -v ls++.conf $ENV{HOME}/.ls++.conf
+#  };
+#}

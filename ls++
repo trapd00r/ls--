@@ -2,8 +2,8 @@
 # vim:ft=perl:et:
 package App::lsplusplus;
 my $APP = 'ls++';
-our $VERSION = '0.66';
-$App::lsplusplus::VERSION = '0.66';
+our $VERSION = '0.68';
+$App::lsplusplus::VERSION = '0.68';
 
 use strict;
 use utf8;
