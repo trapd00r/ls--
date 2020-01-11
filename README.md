@@ -35,10 +35,6 @@ Packages exist for several linux distributions:
 
     pacman -S ls++
 
-## Debian, Ubuntu
-
-    apt-get install ls++
-
 ## SUSE
 
     yast -i ls++
