@@ -365,8 +365,7 @@ sub perm_time_size_file {
 
 sub perm_owner_time_size_file {
   my ($perm, $user, $rel, $size, $file) = @_;
-  if(get_os() eq 'darwin') {
-    printf("%s%s%s%s%s%s%6s%s%s\n",
+    printf("%s%s%s%s%s%s%s%s%s%s\n",
       $d[0],
       $perm,
       $d[3],
@@ -378,21 +377,6 @@ sub perm_owner_time_size_file {
       $d[2],
       $file,
     );
-  } 
-  else {
-    printf("%s %s%s%s%s%s%s%s%s%s\n",
-      $d[0],
-      $perm,
-      $d[3],
-      $user,
-      $d[2],
-      $rel,
-      $d[2],
-      $size,
-      $d[2],
-      $file,
-    );
-  }
 }
 
 sub perm_size_file {
