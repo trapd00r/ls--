@@ -51,7 +51,7 @@ in your shellrc. The program will be there in your normal repositories. :)
 
 
     # cpanm Term::ExtendedColor File::LsColor
-    $ git clone git://github.com/trapd00r/ls--.git
+    $ git clone git@github.com:trapd00r/ls--.git
     $ cd ls--
     $ perl Makefile.PL
     $ make && su -c 'make install'
@@ -65,7 +65,7 @@ in your shellrc. The program will be there in your normal repositories. :)
     $ export PERL_MM_OPT="INSTALL_BASE=${PERL5LIB}"
     $ cpanm Term::ExtendedColor File::LsColor
 
-    $ git clone git://github.com/trapd00r/ls--.git
+    $ git clone git@github.com:trapd00r/ls--.git
     $ cd ls--
     $ perl Makefile.PL
     $ make
@@ -87,7 +87,7 @@ and run the cpan command as root.
 ### Mac OS X Installation
 
     # cpan Term::ExtendedColor File::LsColor
-    $ git clone git://github.com/trapd00r/ls--.git
+    $ git clone git@github.com:trapd00r/ls--.git
     $ cd ls--
     $ perl Makefile.PL
     $ make && sudo 'make install'
