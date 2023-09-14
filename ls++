@@ -175,6 +175,12 @@ sub ls {
     }
     elsif( ($^O eq 'darwin') or ($^O =~ /.+bsd$/) ) {
         ($perm, $hlink, $user, $group, $size, $day, $month, $time, $year, $file) = split(/\s+/, $line, 10);
+
+        # apparntly new MacOSX changed the order of columnns
+        if (!($day =~ /\d+/)) {
+          ($day, $month) = ($month, $day);
+        }
+
         chop($file);
         if( (!$day) ) {
           printf("%s", $line);
